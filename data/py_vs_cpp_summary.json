@@ -1,0 +1,16 @@
+{
+  "python_visionFPV3": {
+    "mean_error_px": 5.17,
+    "mean_iou": 0.781,
+    "success_rate_percent": 99.0,
+    "mean_latency_ms": 17.88,
+    "fps": 55.9
+  },
+  "cpp_vision_fpv3": {
+    "mean_error_px": 9.4,
+    "mean_iou": 0.693,
+    "success_rate_percent": 97.7,
+    "mean_latency_ms": 17.25,
+    "fps": 58.0
+  }
+}
