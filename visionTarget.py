@@ -6,7 +6,7 @@ import urllib.request
 # ============================================================
 # CONFIGURATION
 # ============================================================
-USE_ESP_CAM = True                             # Set True untuk stream ESP32-CAM, False untuk Webcam lokal
+USE_ESP_CAM = False                             # Set True untuk stream ESP32-CAM, False untuk Webcam lokal
 ESP_CAM_URL = "http://172.20.10.3/stream" # URL stream ESP32-CAM (contoh: http://<IP>:81/stream atau http://<IP>/mjpeg)
 CAMERA_INDEX = 0                               # Index webcam lokal jika USE_ESP_CAM = False
 DEFAULT_ROI_W = 100

@@ -1,0 +1,29 @@
+{
+  "v1": {
+    "mean_error_px": 1.25,
+    "median_error_px": 0.71,
+    "mean_iou": 0.405,
+    "success_rate_percent": 43.1,
+    "mean_latency_ms": 7.52,
+    "fps": 132.9,
+    "lost_frames": 168
+  },
+  "v2": {
+    "mean_error_px": 67.43,
+    "median_error_px": 83.38,
+    "mean_iou": 0.406,
+    "success_rate_percent": 43.1,
+    "mean_latency_ms": 17.22,
+    "fps": 58.1,
+    "lost_frames": 0
+  },
+  "v3": {
+    "mean_error_px": 5.17,
+    "median_error_px": 3.2,
+    "mean_iou": 0.781,
+    "success_rate_percent": 99.0,
+    "mean_latency_ms": 29.39,
+    "fps": 34.0,
+    "lost_frames": 0
+  }
+}

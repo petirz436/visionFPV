@@ -184,6 +184,43 @@ def apply_deadzone(value, deadzone):
     return value
 
 
+def get_camera_capture(source=CAMERA_INDEX):
+    """
+    Membuka video capture dengan penanganan backend Linux V4L2 & auto-fallback index kamera.
+    Mendukung integer camera index, path file video, atau URL stream (RTSP/HTTP).
+    """
+    if isinstance(source, int) or (isinstance(source, str) and (source.isdigit() or source.startswith("-"))):
+        idx = int(source)
+        for backend in [cv2.CAP_V4L2, cv2.CAP_ANY]:
+            cap = cv2.VideoCapture(idx, backend)
+            if cap.isOpened():
+                ret, frame = cap.read()
+                if ret and frame is not None:
+                    print(f"[INFO] Kamera berhasil dibuka pada index {idx} (backend={backend}).")
+                    return cap
+                cap.release()
+
+        print(f"[WARNING] Kamera index {idx} tidak merespons. Memindai index kamera alternatif...")
+        for fallback_idx in range(4):
+            if fallback_idx == idx:
+                continue
+            for backend in [cv2.CAP_V4L2, cv2.CAP_ANY]:
+                cap = cv2.VideoCapture(fallback_idx, backend)
+                if cap.isOpened():
+                    ret, frame = cap.read()
+                    if ret and frame is not None:
+                        print(f"[INFO] Kamera berhasil dibuka pada fallback index {fallback_idx} (backend={backend}).")
+                        return cap
+                    cap.release()
+    else:
+        cap = cv2.VideoCapture(source)
+        if cap.isOpened():
+            print(f"[INFO] Video/Stream berhasil dibuka: {source}")
+            return cap
+
+    return None
+
+
 # ============================================================
 # MAIN
 # ============================================================
@@ -203,9 +240,9 @@ def main():
     # CAMERA
     # --------------------------------------------------------
 
-    cap = cv2.VideoCapture(CAMERA_INDEX)
+    cap = get_camera_capture(CAMERA_INDEX)
 
-    if not cap.isOpened():
+    if cap is None or not cap.isOpened():
 
         print("[ERROR] Kamera tidak dapat dibuka.")
 

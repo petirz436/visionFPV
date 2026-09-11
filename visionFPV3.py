@@ -1,4 +1,4 @@
-# OpenCV SiamRPN 2 Target Tracker with Kalman Filter Motion Prediction & Pre-processing Pipeline
+# OpenCV SiamRPN 2 Target Tracker with Kalman Filter Motion Prediction
 # Version: 0.3.0 (SiamRPN / DaSiamRPN FPV Target Tracking Upgrade)
 
 import cv2
@@ -25,9 +25,6 @@ DEADZONE = 20
 
 # Maximum consecutive frames to rely on Kalman Filter prediction during lost lock / motion blur
 MAX_LOST_FRAMES = 5
-
-# Pre-processing mode: 'clahe', 'equalize', or 'none'
-DEFAULT_PREPROCESS_MODE = 'clahe'
 
 # Default Tracker Engine: 'siamrpn' or 'csrt'
 DEFAULT_TRACKER_TYPE = 'siamrpn'
@@ -159,36 +156,6 @@ class Kalman2DTracker:
 
 
 # ============================================================
-# IMAGE PRE-PROCESSING PIPELINE
-# ============================================================
-
-def preprocess_frame(frame, mode='clahe'):
-    """
-    Applies image pre-processing pipeline for illumination robustness.
-    Modes:
-      - 'clahe': Contrast Limited Adaptive Histogram Equalization (Grayscale -> CLAHE -> 3-channel BGR)
-      - 'equalize': Standard Histogram Equalization (Grayscale -> Equalize -> 3-channel BGR)
-      - 'none': Raw BGR frame
-    """
-    if mode == 'none':
-        return frame.copy()
-
-    # Convert to Grayscale
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-
-    if mode == 'clahe':
-        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-        enhanced = clahe.apply(gray)
-    elif mode == 'equalize':
-        enhanced = cv2.equalizeHist(gray)
-    else:
-        enhanced = gray
-
-    # Convert back to 3-channel image for full OpenCV tracker compatibility
-    return cv2.cvtColor(enhanced, cv2.COLOR_GRAY2BGR)
-
-
-# ============================================================
 # TRACKER FACTORY (SIAMRPN & CSRT)
 # ============================================================
 
@@ -293,6 +260,43 @@ def apply_deadzone(value, deadzone):
     return value
 
 
+def get_camera_capture(source=CAMERA_INDEX):
+    """
+    Membuka video capture dengan penanganan backend Linux V4L2 & auto-fallback index kamera.
+    Mendukung integer camera index, path file video, atau URL stream (RTSP/HTTP).
+    """
+    if isinstance(source, int) or (isinstance(source, str) and (source.isdigit() or source.startswith("-"))):
+        idx = int(source)
+        for backend in [cv2.CAP_V4L2, cv2.CAP_ANY]:
+            cap = cv2.VideoCapture(idx, backend)
+            if cap.isOpened():
+                ret, frame = cap.read()
+                if ret and frame is not None:
+                    print(f"[INFO] Kamera berhasil dibuka pada index {idx} (backend={backend}).")
+                    return cap
+                cap.release()
+
+        print(f"[WARNING] Kamera index {idx} tidak merespons. Memindai index kamera alternatif...")
+        for fallback_idx in range(4):
+            if fallback_idx == idx:
+                continue
+            for backend in [cv2.CAP_V4L2, cv2.CAP_ANY]:
+                cap = cv2.VideoCapture(fallback_idx, backend)
+                if cap.isOpened():
+                    ret, frame = cap.read()
+                    if ret and frame is not None:
+                        print(f"[INFO] Kamera berhasil dibuka pada fallback index {fallback_idx} (backend={backend}).")
+                        return cap
+                    cap.release()
+    else:
+        cap = cv2.VideoCapture(source)
+        if cap.isOpened():
+            print(f"[INFO] Video/Stream berhasil dibuka: {source}")
+            return cap
+
+    return None
+
+
 # ============================================================
 # MAIN APPLICATION LOOP
 # ============================================================
@@ -300,8 +304,8 @@ def apply_deadzone(value, deadzone):
 def main():
     global selected_bbox
 
-    cap = cv2.VideoCapture(CAMERA_INDEX)
-    if not cap.isOpened():
+    cap = get_camera_capture(CAMERA_INDEX)
+    if cap is None or not cap.isOpened():
         print("[ERROR] Kamera tidak dapat dibuka.")
         return
 
@@ -314,7 +318,6 @@ def main():
     active_tracker_name = DEFAULT_TRACKER_TYPE
     tracking = False
     kalman = Kalman2DTracker()
-    preprocess_mode = DEFAULT_PREPROCESS_MODE
     
     lost_counter = 0
     is_predicting = False
@@ -330,7 +333,7 @@ def main():
     print("==========================================================")
     print(" FPV DRONE TARGET TRACKER v3.0.0 (SiamRPN 2 Edition)")
     print(" Algoritma: SiamRPN (DaSiamRPN) / CSRT + Kalman Filter")
-    print(" Pipeline : Grayscale + CLAHE / Histogram Equalization")
+    print(" Input    : Raw Frame (Mentah)")
     print("==========================================================")
     print()
     print("[MOUSE]")
@@ -339,7 +342,6 @@ def main():
     print()
     print("[KEYBOARD]")
     print("  T     : Toggle Tracker Engine (SiamRPN <-> CSRT)")
-    print("  P     : Toggle Pre-processing Mode (CLAHE -> EQUALIZE -> OFF)")
     print("  R     : Reset Tracker")
     print("  ESC   : Keluar")
     print("==========================================================")
@@ -355,12 +357,6 @@ def main():
         frame_cx = frame_width // 2
         frame_cy = frame_height // 2
 
-        # ----------------------------------------------------
-        # 1. PRE-PROCESSING PIPELINE
-        # ----------------------------------------------------
-        processed_frame = preprocess_frame(raw_frame, mode=preprocess_mode)
-        
-        # Display base frame
         display_frame = raw_frame.copy()
 
         # Draw camera center crosshair
@@ -374,7 +370,7 @@ def main():
         )
 
         # ----------------------------------------------------
-        # 2. USER ROI SELECTION (DRAGGING)
+        # 1. USER ROI SELECTION (DRAGGING)
         # ----------------------------------------------------
         if selecting:
             x1 = min(start_x, current_x)
@@ -384,13 +380,13 @@ def main():
             cv2.rectangle(display_frame, (x1, y1), (x2, y2), (255, 255, 255), 2)
 
         # ----------------------------------------------------
-        # 3. INITIALIZE TRACKER WITH NEW ROI
+        # 2. INITIALIZE TRACKER WITH NEW ROI
         # ----------------------------------------------------
         if selected_bbox is not None:
             bbox = clamp_bbox(selected_bbox, frame_width, frame_height)
             try:
                 tracker, active_tracker_name = create_tracker(active_tracker_name)
-                tracker.init(processed_frame, bbox)
+                tracker.init(raw_frame, bbox)
                 tracking = True
 
                 x, y, w, h = bbox
@@ -412,7 +408,7 @@ def main():
             selected_bbox = None
 
         # ----------------------------------------------------
-        # 4. TRACKING & KALMAN MOTION PREDICTION
+        # 3. TRACKING & KALMAN MOTION PREDICTION
         # ----------------------------------------------------
         now = time.time()
         dt = max(now - last_time, 0.001)
@@ -421,7 +417,7 @@ def main():
         target_cx, target_cy = None, None
 
         if tracking and tracker is not None:
-            success, bbox = tracker.update(processed_frame)
+            success, bbox = tracker.update(raw_frame)
 
             if success:
                 x, y, w, h = bbox
@@ -476,7 +472,7 @@ def main():
                     try:
                         pred_bbox = clamp_bbox((pred_x, pred_y, w, h), frame_width, frame_height)
                         tracker, active_tracker_name = create_tracker(active_tracker_name)
-                        tracker.init(processed_frame, pred_bbox)
+                        tracker.init(raw_frame, pred_bbox)
                     except Exception:
                         pass
 
@@ -494,7 +490,7 @@ def main():
                     is_predicting = False
 
         # ----------------------------------------------------
-        # 5. SMOOTHING & CONTROLLER ERROR COMPUTATION
+        # 4. SMOOTHING & CONTROLLER ERROR COMPUTATION
         # ----------------------------------------------------
         if target_cx is not None and target_cy is not None:
             if smooth_cx is None:
@@ -553,29 +549,21 @@ def main():
             cv2.putText(display_frame, status_text, (20, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.8, status_color, 2)
 
         # ----------------------------------------------------
-        # 6. HUD OVERLAY (DEADZONE, PIPELINE MODE & FPS)
+        # 5. HUD OVERLAY (DEADZONE, ENGINE & FPS)
         # ----------------------------------------------------
         # Deadzone rectangle
         dz_x, dz_y = int(DEADZONE), int(DEADZONE)
         cv2.rectangle(display_frame, (frame_cx - dz_x, frame_cy - dz_y), (frame_cx + dz_x, frame_cy + dz_y), (255, 255, 255), 1)
 
-        # Active Tracker Engine & Pipeline status
+        # Active Tracker Engine status
         cv2.putText(display_frame, f"ENGINE: {active_tracker_name.upper()}", (frame_width - 240, 65), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0), 2)
-        cv2.putText(display_frame, f"PIPELINE: {preprocess_mode.upper()}", (frame_width - 240, 95), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200, 250, 200), 2)
 
         # FPS counter
         fps = 1.0 / dt if dt > 0 else 0
         cv2.putText(display_frame, f"FPS: {fps:.1f}", (frame_width - 140, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
 
-        # PIP (Picture in Picture) pre-processed feed
-        pip_h, pip_w = 120, 160
-        small_proc = cv2.resize(processed_frame, (pip_w, pip_h))
-        display_frame[frame_height - pip_h - 10:frame_height - 10, frame_width - pip_w - 10:frame_width - 10] = small_proc
-        cv2.rectangle(display_frame, (frame_width - pip_w - 10, frame_height - pip_h - 10), (frame_width - 10, frame_height - 10), (0, 255, 255), 1)
-        cv2.putText(display_frame, "PREPROCESSED", (frame_width - pip_w - 5, frame_height - pip_h - 15), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 255), 1)
-
         # ----------------------------------------------------
-        # 7. DISPLAY & KEYBOARD INPUT
+        # 6. DISPLAY & KEYBOARD INPUT
         # ----------------------------------------------------
         cv2.imshow(window_name, display_frame)
 
@@ -597,10 +585,6 @@ def main():
                 print("[ENGINE] Re-initializing tracker with current bounding box...")
                 tracker = None
                 selected_bbox = (int(smooth_cx - last_bbox_wh[0]/2), int(smooth_cy - last_bbox_wh[1]/2), last_bbox_wh[0], last_bbox_wh[1])
-        elif key == ord("p") or key == ord("P"):
-            modes = ['clahe', 'equalize', 'none']
-            preprocess_mode = modes[(modes.index(preprocess_mode) + 1) % len(modes)]
-            print(f"\n[PIPELINE] Switched Pre-processing mode to: {preprocess_mode.upper()}")
 
     cap.release()
     cv2.destroyAllWindows()
