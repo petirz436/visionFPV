@@ -12,15 +12,25 @@ import time
 import os
 import argparse
 
-# Import tracker implementations from workspace scripts
-from visionFPV import create_csrt_tracker as create_v1_tracker
-from visionFPV2 import create_csrt_tracker as create_v2_csrt, Kalman2DTracker as KalmanV2
-from visionFPV3 import create_tracker as create_v3_tracker, Kalman2DTracker as KalmanV3, clamp_bbox, MAX_LOST_FRAMES
+import sys
 
-VIDEO_PATH = "synthetic_fpv_test.mp4"
-GT_PATH = "synthetic_gt.json"
-CSV_PATH = "benchmark_results.csv"
-SUMMARY_PATH = "benchmark_summary.json"
+# Set up project base path & data directory
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
+
+DATA_DIR = os.path.join(BASE_DIR, "data")
+os.makedirs(DATA_DIR, exist_ok=True)
+
+# Import tracker implementations from src package
+from src.visionFPV import create_csrt_tracker as create_v1_tracker
+from src.visionFPV2 import create_csrt_tracker as create_v2_csrt, Kalman2DTracker as KalmanV2
+from src.visionFPV3 import create_tracker as create_v3_tracker, Kalman2DTracker as KalmanV3, clamp_bbox, MAX_LOST_FRAMES
+
+VIDEO_PATH = os.path.join(DATA_DIR, "synthetic_fpv_test.mp4")
+GT_PATH = os.path.join(DATA_DIR, "synthetic_gt.json")
+CSV_PATH = os.path.join(DATA_DIR, "benchmark_results.csv")
+SUMMARY_PATH = os.path.join(DATA_DIR, "benchmark_summary.json")
 
 
 def compute_iou(boxA, boxB):
@@ -54,7 +64,7 @@ def run_benchmark(headless=False, save_video=False):
 
     if not os.path.exists(VIDEO_PATH) or not os.path.exists(GT_PATH):
         print("[ERROR] Test dataset not found. Generating synthetic dataset first...")
-        from synthetic_generator import generate_synthetic_dataset
+        from benchmark.synthetic_generator import generate_synthetic_dataset
         generate_synthetic_dataset()
 
     with open(GT_PATH, "r") as f:
@@ -73,7 +83,7 @@ def run_benchmark(headless=False, save_video=False):
     out_writer = None
     if save_video:
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        out_writer = cv2.VideoWriter("benchmark_visualization.mp4", fourcc, 30, (frame_width, frame_height))
+        out_writer = cv2.VideoWriter(os.path.join(DATA_DIR, "benchmark_visualization.mp4"), fourcc, 30, (frame_width, frame_height))
 
     # Read first frame to initialize all 3 trackers on Ground Truth ROI
     ret, first_frame = cap.read()

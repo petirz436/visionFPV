@@ -43,7 +43,7 @@ Sistem Visi Komputer berkinerja tinggi berbasis **Python** dan **OpenCV** yang d
 ### 2. Instalasi Dependency
 Jalankan perintah berikut di terminal:
 ```bash
-pip install opencv-contrib-python numpy
+pip install -r requirements.txt
 ```
 
 ---
@@ -51,7 +51,7 @@ pip install opencv-contrib-python numpy
 ## 🚀 Cara Penggunaan
 
 ### 1. Pengaturan Sumber Kamera
-Buka file `visionTarget.py` dan sesuaikan parameter berikut pada bagian `# CONFIGURATION`:
+Buka file `src/visionTarget.py` dan sesuaikan parameter berikut pada bagian `# CONFIGURATION`:
 
 #### A. Menggunakan Webcam Lokal
 ```python
@@ -66,9 +66,16 @@ ESP_CAM_URL = "http://192.168.1.100:81/stream"  # Sesuaikan dengan IP ESP32-CAM 
 ```
 
 ### 2. Menjalankan Program
-Jalankan perintah Python berikut:
+Jalankan skrip utama dari direktori akar proyek:
 ```bash
-python visionTarget.py
+python src/visionTarget.py
+```
+
+### 3. Menjalankan Evaluation Benchmark
+Untuk melakukan benchmark perbandingan tracker (V1 vs V2 vs V3):
+```bash
+python benchmark/benchmark_suite.py --headless
+python benchmark/benchmark_plotter.py
 ```
 
 ### 3. Kontrol Navigasi & Keyboard
@@ -165,14 +172,36 @@ Ubah nilai `HSV_LOWER` dan `HSV_UPPER` sesuai warna objek yang ingin dideteksi:
 
 ---
 
-## 📌 Struktur Kode `visionTarget.py`
+## 📌 Struktur Proyek
 
 ```text
-visionTarget.py
-├── 1. CONFIGURATION           : Variable parameter tuning, stream URL, & mask HSV
-├── 2. ESP32-CAM HANDLER       : Class ESPCamStream & fungsi get_camera_capture()
-├── 3. TRACKER FACTORY         : Fungsi pembuatan cv.TrackerCSRT
-├── 4. GLOBAL STATE & MOUSE    : Callback event mouse (klik & drag ROI)
-├── 5. HELPER FUNCTIONS        : Fungsi clamp_bbox() & apply_deadzone()
-└── 6. MAIN APPLICATION        : Loop utama pemrosesan frame, deteksi, tracking & HUD
+/home/fathir/kuyang/
+├── README.md
+├── requirements.txt
+├── .gitignore
+├── src/                                  # Source Code Utama Pelacak & Drone API
+│   ├── visionTarget.py                   # Multi-Target Vision Lock System (Main)
+│   ├── visionFPV.py                      # Single-Target CSRT Tracker (v1)
+│   ├── visionFPV2.py                     # CSRT Tracker + Kalman Filter (v2)
+│   ├── visionFPV3.py                     # DaSiamRPN ONNX + Kalman Filter (v3)
+│   ├── visionEksbot2.py                  # Auxiliary Vision Utility
+│   └── droneAPI.py                       # MAVROS / ROS Drone Control Interface
+├── benchmark/                            # Suite Benchmark & Pengujian Sintetik
+│   ├── benchmark_suite.py                # Tracker Performance Evaluator
+│   ├── benchmark_plotter.py              # Statistical Data Plotter
+│   └── synthetic_generator.py            # Synthetic Test Video & GT Generator
+├── data/                                 # Datasets & Output Files
+│   ├── synthetic_gt.json
+│   ├── synthetic_fpv_test.mp4
+│   ├── benchmark_results.csv
+│   ├── benchmark_summary.json
+│   ├── benchmark_summary.png
+│   └── benchmark_visualization.mp4
+├── models/                               # Deep Learning / ONNX Model Weights
+│   ├── dasiamrpn_model.onnx
+│   ├── dasiamrpn_kernel_r1.onnx
+│   └── dasiamrpn_kernel_cls1.onnx
+└── docs/                                 # Dokumentasi & Media
+    └── assets/
+        └── Multi-Target Vision Lock System_screenshot_10.09.2026.png
 ```

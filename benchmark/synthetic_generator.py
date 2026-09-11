@@ -12,14 +12,22 @@ Simulates realistic FPV drone scenarios:
 import cv2
 import numpy as np
 import json
+import sys
 import os
+
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
+
+DATA_DIR = os.path.join(BASE_DIR, "data")
+os.makedirs(DATA_DIR, exist_ok=True)
 
 WIDTH = 640
 HEIGHT = 480
 FPS = 30
 NUM_FRAMES = 300
-OUTPUT_VIDEO = "synthetic_fpv_test.mp4"
-OUTPUT_GT = "synthetic_gt.json"
+OUTPUT_VIDEO = os.path.join(DATA_DIR, "synthetic_fpv_test.mp4")
+OUTPUT_GT = os.path.join(DATA_DIR, "synthetic_gt.json")
 
 
 def create_background(frame_idx):

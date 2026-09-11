@@ -30,7 +30,7 @@ MAX_LOST_FRAMES = 5
 DEFAULT_TRACKER_TYPE = 'siamrpn'
 
 # SiamRPN ONNX Model Paths & Downloads
-MODEL_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
+MODEL_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "models"))
 SIAM_MODEL_PATH = os.path.join(MODEL_DIR, "dasiamrpn_model.onnx")
 SIAM_CLS_PATH = os.path.join(MODEL_DIR, "dasiamrpn_kernel_cls1.onnx")
 SIAM_R1_PATH = os.path.join(MODEL_DIR, "dasiamrpn_kernel_r1.onnx")

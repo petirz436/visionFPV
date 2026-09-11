@@ -10,9 +10,19 @@ import json
 import os
 import matplotlib.pyplot as plt
 
-CSV_PATH = "benchmark_results.csv"
-SUMMARY_PATH = "benchmark_summary.json"
-OUTPUT_PLOT = "benchmark_summary.png"
+import sys
+
+# Set up project base path & data directory
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
+
+DATA_DIR = os.path.join(BASE_DIR, "data")
+os.makedirs(DATA_DIR, exist_ok=True)
+
+CSV_PATH = os.path.join(DATA_DIR, "benchmark_results.csv")
+SUMMARY_PATH = os.path.join(DATA_DIR, "benchmark_summary.json")
+OUTPUT_PLOT = os.path.join(DATA_DIR, "benchmark_summary.png")
 
 
 def generate_benchmark_plots():
