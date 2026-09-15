@@ -1,0 +1,2052 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VisionFPV Modular Timeline &amp; Benchmark Studio</title>
+    <!-- Chart.js CDN with fallback -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --panel-bg: #ffffff;
+            --panel-border: #e2e8f0;
+            --text-main: #334155;
+            --text-muted: #64748b;
+            --text-bright: #0f172a;
+            --accent-blue: #3b82f6;
+            --accent-teal: #0d9488;
+            --accent-emerald: #10b981;
+            --accent-purple: #8b5cf6;
+            --accent-rose: #e11d48;
+            --accent-amber: #d97706;
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            --radius-lg: 12px;
+            --radius-md: 8px;
+            --radius-sm: 6px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            padding: 24px;
+            min-height: 100vh;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 18px;
+            border-bottom: 1px solid var(--panel-border);
+            margin-bottom: 24px;
+        }
+
+        .header-title-container h1 {
+            color: var(--text-bright);
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .header-title-container p {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            margin-top: 2px;
+        }
+
+        .badge-status {
+            background-color: #ecfdf5;
+            color: var(--accent-teal);
+            border: 1px solid #a7f3d0;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .badge-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--accent-emerald);
+        }
+
+        .grid-layout {
+            display: grid;
+            grid-template-columns: 440px 1fr;
+            gap: 24px;
+        }
+
+        @media (max-width: 1150px) {
+            .grid-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .card h2 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-bright);
+            margin-bottom: 16px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #f1f5f9;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.825rem;
+            font-weight: 500;
+            margin-bottom: 6px;
+            color: var(--text-muted);
+        }
+
+        .form-control,
+        select,
+        input[type="text"],
+        input[type="number"] {
+            width: 100%;
+            padding: 9px 12px;
+            background: #ffffff;
+            border: 1px solid var(--panel-border);
+            border-radius: var(--radius-md);
+            color: var(--text-bright);
+            font-size: 0.875rem;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .form-control:focus,
+        select:focus,
+        input:focus {
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+        }
+
+        .form-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .slider-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .slider-group input[type="range"] {
+            flex: 1;
+            accent-color: var(--accent-blue);
+        }
+
+        .slider-val {
+            font-weight: 600;
+            color: var(--accent-blue);
+            min-width: 45px;
+            font-size: 0.875rem;
+            text-align: right;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 10px 16px;
+            border: none;
+            border-radius: var(--radius-md);
+            font-weight: 600;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:active {
+            transform: translateY(1px);
+        }
+
+        .btn-blue {
+            background-color: var(--accent-blue);
+            color: #ffffff;
+        }
+
+        .btn-blue:hover {
+            background-color: #2563eb;
+        }
+
+        .btn-teal {
+            background-color: var(--accent-teal);
+            color: #ffffff;
+        }
+
+        .btn-teal:hover {
+            background-color: #0f766e;
+        }
+
+        .btn-secondary {
+            background-color: #f1f5f9;
+            color: var(--text-main);
+            border: 1px solid var(--panel-border);
+        }
+
+        .btn-secondary:hover {
+            background-color: #e2e8f0;
+        }
+
+        .program-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 160px;
+            overflow-y: auto;
+            border: 1px solid var(--panel-border);
+            border-radius: var(--radius-md);
+            padding: 8px;
+            background: #fafafa;
+        }
+
+        .program-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 10px;
+            background: #ffffff;
+            border: 1px solid var(--panel-border);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+        }
+
+        .program-item input[type="checkbox"] {
+            accent-color: var(--accent-blue);
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
+        .program-info {
+            flex: 1;
+        }
+
+        .program-name {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-bright);
+        }
+
+        .program-meta {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .tag-lang {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 700;
+        }
+
+        .tag-cpp {
+            background: #e0f2fe;
+            color: #0369a1;
+        }
+
+        .tag-py {
+            background: #fef3c7;
+            color: #b45309;
+        }
+
+        /* Canvas Container */
+        .canvas-container {
+            position: relative;
+            width: 100%;
+            background: #f1f5f9;
+            border: 1px dashed var(--panel-border);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            text-align: center;
+        }
+
+        canvas {
+            max-width: 100%;
+            cursor: crosshair;
+            display: block;
+            margin: 0 auto;
+        }
+
+        .toggle-container {
+            display: flex;
+            background: #f1f5f9;
+            border: 1px solid var(--panel-border);
+            border-radius: var(--radius-md);
+            padding: 3px;
+            margin-bottom: 16px;
+        }
+
+        .toggle-btn {
+            flex: 1;
+            padding: 7px;
+            text-align: center;
+            font-size: 0.8rem;
+            font-weight: 600;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            color: var(--text-muted);
+            transition: all 0.2s;
+        }
+
+        .toggle-btn.active {
+            background: #ffffff;
+            color: var(--text-bright);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .tool-palette {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+
+        .tool-btn {
+            padding: 7px 8px;
+            border: 1px solid var(--panel-border);
+            border-radius: var(--radius-sm);
+            background: #ffffff;
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--text-main);
+            cursor: pointer;
+            text-align: center;
+        }
+
+        .tool-btn.active {
+            background: #dbeafe;
+            border-color: var(--accent-blue);
+            color: #1e40af;
+        }
+
+        /* Modular Timeline GUI */
+        .timeline-container {
+            border: 1px solid var(--panel-border);
+            border-radius: var(--radius-md);
+            padding: 12px;
+            background: #f8fafc;
+            margin-bottom: 14px;
+        }
+
+        .timeline-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .timeline-header h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-bright);
+        }
+
+        .block-add-btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+
+        .btn-sm-block {
+            padding: 4px 8px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--panel-border);
+            background: #ffffff;
+            cursor: pointer;
+        }
+
+        .btn-sm-block:hover {
+            background: #e2e8f0;
+        }
+
+        .timeline-blocks-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .timeline-block-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px;
+            background: #ffffff;
+            border: 1px solid var(--panel-border);
+            border-radius: var(--radius-sm);
+            font-size: 0.8rem;
+        }
+
+        .block-title {
+            font-weight: 700;
+            width: 100px;
+        }
+
+        .block-input-small {
+            width: 55px;
+            padding: 4px 6px;
+            font-size: 0.78rem;
+            text-align: center;
+        }
+
+        /* Results & Metrics */
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .summary-cards {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .summary-card {
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: var(--radius-md);
+            padding: 14px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .summary-card label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .summary-card .val {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--text-bright);
+        }
+
+        .summary-card .sub {
+            font-size: 0.75rem;
+            color: var(--accent-teal);
+            margin-top: 2px;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 1200px) {
+            .charts-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 640px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .chart-box {
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: var(--radius-lg);
+            padding: 16px;
+            box-shadow: var(--shadow-sm);
+            height: 240px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chart-box h3 {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            flex: 1;
+            width: 100%;
+            min-height: 0;
+        }
+
+        .player-box {
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 20px;
+        }
+
+        .player-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 14px;
+        }
+
+        .player-header h2 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-bright);
+        }
+
+        .player-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        .player-controls input[type="range"] {
+            flex: 1;
+            accent-color: var(--accent-blue);
+        }
+
+        .legend-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            font-size: 0.78rem;
+            font-weight: 500;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .legend-color {
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+        }
+
+        .table-box {
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .table-box h2 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-bright);
+            margin-bottom: 14px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        th,
+        td {
+            padding: 10px 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--panel-border);
+        }
+
+        th {
+            background: #f8fafc;
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.04em;
+        }
+
+        td {
+            color: var(--text-main);
+        }
+
+        tr:hover {
+            background: #f1f5f9;
+        }
+
+        .badge-rec {
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 3px 9px;
+            border-radius: 12px;
+            display: inline-block;
+        }
+
+        .badge-rec-blue {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .badge-rec-emerald {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge-rec-teal {
+            background: #ccfbf1;
+            color: #115e59;
+        }
+
+        .badge-rec-amber {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .badge-rec-rose {
+            background: #ffe4e6;
+            color: #9f1239;
+        }
+
+        /* Modal Overlay & Algorithm Profile Popup */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.55);
+            backdrop-filter: blur(4px);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-content {
+            background: var(--panel-bg);
+            border-radius: 12px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 840px;
+            border: 1px solid var(--panel-border);
+            overflow: hidden;
+            animation: modalFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: scale(0.96) translateY(10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--panel-border);
+            background: #f8fafc;
+        }
+
+        .modal-close-btn {
+            background: transparent;
+            border: none;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 6px;
+        }
+
+        .modal-close-btn:hover {
+            background: #e2e8f0;
+            color: var(--text-bright);
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .modal-grid {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .modal-grid { grid-template-columns: 1fr; }
+        }
+
+        .modal-stat-cards {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .modal-stat-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 10px 12px;
+            border-radius: 8px;
+        }
+
+        .modal-stat-card label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .modal-stat-card .val {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text-bright);
+        }
+
+        tr.clickable-row {
+            cursor: pointer;
+            transition: background-color 0.15s;
+        }
+
+        tr.clickable-row:hover {
+            background-color: #f1f5f9 !important;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header class="header">
+        <div class="header-title-container">
+            <h1>VisionFPV Benchmark Studio</h1>
+            <p>Modular Drag &amp; Drop Timeline Sequencer, Waypoint Path &amp; Frame Teleport Evaluator</p>
+        </div>
+        <div class="badge-status">
+            <span class="badge-dot"></span>
+            <span>Modular Studio</span>
+        </div>
+    </header>
+
+    <div class="grid-layout">
+
+        <!-- LEFT COLUMN: CONTROL PANELS -->
+        <div class="controls-column">
+
+            <!-- CARD 1: VISION PROGRAMS REGISTRY SELECTOR -->
+            <div class="card">
+                <h2>
+                    <span>Vision Programs Directory</span>
+                    <span id="selected-count" style="font-size: 0.75rem; color: var(--accent-blue);">2 selected</span>
+                </h2>
+
+                <div class="form-group">
+                    <label>Evaluation Mode</label>
+                    <div class="toggle-container">
+                        <div id="eval-single" class="toggle-btn" onclick="setEvalMode('single')">Single Program</div>
+                        <div id="eval-multi" class="toggle-btn active" onclick="setEvalMode('multi')">Multi Comparison
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Select Registered Programs to Compare</label>
+                    <div class="program-list" id="program-list-container"></div>
+                </div>
+            </div>
+
+            <!-- CARD 2: WAYPOINT FLIGHT PATH & SPEED PROFILES -->
+            <div class="card">
+                <h2>Waypoint Flight Path &amp; Speed Profile</h2>
+
+                <div class="form-group">
+                    <label>Motion Pattern</label>
+                    <select id="syn-pattern" onchange="generateSyntheticDataset()">
+                        <option value="waypoint_flight" selected>Custom Waypoint Flight Path</option>
+                        <option value="wild_random">Wild Evasive Random Flight (Unpredictable)</option>
+                        <option value="zigzag">Agile ZigZag (FPV Flight)</option>
+                        <option value="smooth">Smooth Curved Motion</option>
+                        <option value="circular">Circular Orbit</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Target Velocity &amp; Acceleration Profile</label>
+                    <select id="syn-vel-profile" onchange="generateSyntheticDataset()">
+                        <option value="constant" selected>Constant Speed (Stabil)</option>
+                        <option value="accelerating">Constant Acceleration (Accelerating / Naik)</option>
+                        <option value="decelerating">Constant Deceleration (Decelerating / Turun)</option>
+                        <option value="bell_curve">Ease-In Ease-Out (Accelerate then Decelerate)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- CARD 3: MODULAR DRAG & DROP TIMELINE SEQUENCER -->
+            <div class="card">
+                <h2>Modular Timeline Scene Sequencer (0-300 Frames)</h2>
+
+                <div class="timeline-container">
+                    <div class="timeline-header">
+                        <h3>Add Scene Effect Blocks</h3>
+                    </div>
+
+                    <div class="block-add-btn-group">
+                        <button class="btn-sm-block" onclick="addTimelineBlock('shake')">+ Shake Jitter</button>
+                        <button class="btn-sm-block" onclick="addTimelineBlock('blur')">+ Motion Blur</button>
+                        <button class="btn-sm-block" onclick="addTimelineBlock('burst')">+ Speed Burst</button>
+                        <button class="btn-sm-block" onclick="addTimelineBlock('teleport')">+ Teleport / Lag
+                            Jump</button>
+                    </div>
+
+                    <div class="timeline-blocks-list" id="timeline-blocks-container">
+                        <!-- Blocks rendered dynamically -->
+                    </div>
+                </div>
+
+                <button class="btn btn-blue" onclick="generateSyntheticDataset()">Apply Modular Timeline &amp;
+                    Re-run</button>
+            </div>
+
+            <!-- CARD 4: CUSTOM IMAGE IMPORTS -->
+            <div class="card">
+                <h2>Custom Image Imports</h2>
+
+                <div class="form-group">
+                    <label>Import Custom Scenery Background</label>
+                    <input type="file" id="bg-img-input" accept="image/*" onchange="importBackgroundImage(this)">
+                </div>
+
+                <div class="form-group">
+                    <label>Import Custom Target Sprite / Object</label>
+                    <input type="file" id="target-img-input" accept="image/*" onchange="importTargetImage(this)">
+                </div>
+
+                <button class="btn btn-secondary" onclick="clearCustomImages()">Clear Custom Images</button>
+            </div>
+
+            <!-- CARD 5: INTERACTIVE MAP & POLYGON OBSTACLE EDITOR -->
+            <div class="card">
+                <h2>Interactive Map &amp; Waypoint Canvas Editor</h2>
+
+                <div class="form-group">
+                    <label>Canvas Edit Mode</label>
+                    <div class="tool-palette">
+                        <button id="tool-waypoint" class="tool-btn active"
+                            onclick="setMapTool('waypoint')">Waypoints</button>
+                        <button id="tool-roi" class="tool-btn" onclick="setMapTool('roi')">Target ROI</button>
+                        <button id="tool-rect" class="tool-btn" onclick="setMapTool('rect')">Add Rect</button>
+                        <button id="tool-poly" class="tool-btn" onclick="setMapTool('poly')">Polygon</button>
+                        <button id="tool-move" class="tool-btn" onclick="setMapTool('move')">Drag Move</button>
+                    </div>
+                </div>
+
+                <div id="poly-controls" style="display: none; margin-bottom: 12px;">
+                    <p style="font-size: 0.78rem; color: var(--accent-blue); margin-bottom: 6px;">Click on canvas to add
+                        polygon points.</p>
+                    <div class="form-row">
+                        <button class="btn btn-teal" style="font-size: 0.78rem; padding: 6px;"
+                            onclick="finishPolygon()">Complete Polygon</button>
+                        <button class="btn btn-secondary" style="font-size: 0.78rem; padding: 6px;"
+                            onclick="cancelPolygon()">Cancel</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Canvas Interactive Preview &amp; Editor</label>
+                    <div class="canvas-container">
+                        <canvas id="roi-canvas" width="640" height="360"></canvas>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <button class="btn btn-secondary" style="font-size: 0.78rem;" onclick="clearWaypoints()">Clear
+                        Waypoints</button>
+                    <button class="btn btn-secondary" style="font-size: 0.78rem;" onclick="clearObstacles()">Clear
+                        Obstacles</button>
+                </div>
+            </div>
+
+            <!-- CARD 6: HARDWARE THROTTLING -->
+            <div class="card">
+                <h2>Hardware Execution Mode</h2>
+                <div class="toggle-container">
+                    <div id="mode-pc" class="toggle-btn active" onclick="setMode('pc')">Laptop (Full Speed)</div>
+                    <div id="mode-raspi" class="toggle-btn" onclick="setMode('raspi')">Raspberry Pi 4 (Throttled)</div>
+                </div>
+
+                <button class="btn btn-teal" onclick="runBenchmark()">Run Comparative Benchmark</button>
+            </div>
+
+        </div>
+
+        <!-- RIGHT COLUMN: RESULTS & VISUALIZATION -->
+        <div class="results-column">
+
+            <!-- METRICS SUMMARY CARDS -->
+            <div class="summary-cards">
+                <div class="summary-card">
+                    <label>Top Speed Program</label>
+                    <div class="val" id="sum-top-speed">C++ SiamRPN</div>
+                    <div class="sub" id="sum-top-speed-sub">550 FPS (1.8 ms)</div>
+                </div>
+                <div class="summary-card">
+                    <label>Waypoints Count</label>
+                    <div class="val" id="sum-waypoint-count">4 Points</div>
+                    <div class="sub" id="sum-waypoint-sub">Custom Waypoint Path</div>
+                </div>
+                <div class="summary-card">
+                    <label>Timeline Blocks</label>
+                    <div class="val" id="sum-block-count">3 Blocks</div>
+                    <div class="sub" id="sum-block-sub">Modular Scene</div>
+                </div>
+                <div class="summary-card">
+                    <label>Lock Success Avg</label>
+                    <div class="val" id="sum-top-success">98.2 %</div>
+                    <div class="sub" id="sum-top-success-sub">High precision lock</div>
+                </div>
+            </div>
+
+            <!-- 6-PANEL CHARTS GRID -->
+            <div class="charts-grid">
+                <div class="chart-box">
+                    <h3>1. Frame Latency (ms)</h3>
+                    <div class="chart-wrapper"><canvas id="chart-latency"></canvas></div>
+                </div>
+                <div class="chart-box">
+                    <h3>2. Speed (FPS &amp; ms)</h3>
+                    <div class="chart-wrapper"><canvas id="chart-speed"></canvas></div>
+                </div>
+                <div class="chart-box">
+                    <h3>3. RAM Footprint (MB)</h3>
+                    <div class="chart-wrapper"><canvas id="chart-ram"></canvas></div>
+                </div>
+                <div class="chart-box">
+                    <h3>4. Center Distance Error (px)</h3>
+                    <div class="chart-wrapper"><canvas id="chart-error"></canvas></div>
+                </div>
+                <div class="chart-box">
+                    <h3>5. Bounding Box IoU Score</h3>
+                    <div class="chart-wrapper"><canvas id="chart-iou"></canvas></div>
+                </div>
+                <div class="chart-box">
+                    <h3>6. Target Lock Success (%)</h3>
+                    <div class="chart-wrapper"><canvas id="chart-success"></canvas></div>
+                </div>
+            </div>
+
+            <!-- CANVAS PLAYER & PHYSICAL SIMULATION VISUALIZATION -->
+            <div class="player-box">
+                <div class="player-header">
+                    <h2>Real-Time Tracking &amp; Modular Scene Player</h2>
+                    <div class="legend-container" id="player-legend"></div>
+                </div>
+
+                <div class="canvas-container">
+                    <canvas id="player-canvas" width="640" height="360"></canvas>
+                </div>
+
+                <div class="player-controls">
+                    <button id="play-btn" class="btn btn-blue" style="width: auto; padding: 8px 18px;"
+                        onclick="togglePlay()">Pause</button>
+                    <input type="range" id="progress-slider" min="0" max="299" value="0" oninput="onSeek(this.value)">
+                    <span id="frame-counter"
+                        style="font-size: 0.825rem; font-weight: 600; min-width: 80px; text-align: right;">Frame:
+                        0/300</span>
+                </div>
+            </div>
+
+            <!-- SUMMARY TABLE & ALGORITHM RECOMMENDATIONS -->
+            <div class="table-box">
+                <h2>Comparative Algorithm Summary &amp; Recommendations</h2>
+                <p style="font-size:0.78rem; color:var(--text-muted); margin-top:-8px; margin-bottom:12px;">Click any algorithm row below to open its 6-axis Game-Style Radar Stats Diagram and detailed technical assessment.</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Program Name</th>
+                            <th>Language</th>
+                            <th>Avg Latency</th>
+                            <th>FPS</th>
+                            <th>RAM (MB)</th>
+                            <th>IoU Score</th>
+                            <th>Lost Detect</th>
+                            <th>Overall Score</th>
+                            <th>Recommendation</th>
+                        </tr>
+                    </thead>
+                    <tbody id="summary-table-body"></tbody>
+                </table>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        // Programs Registry Database
+        const PROGRAM_REGISTRY = [
+            { id: 'siamrpn_cpp', name: 'SiamRPN Tracker (C++)', lang: 'C++', file: 'siamrpn_tracker_cpp.cpp', color: '#0d9488', baseMs: 1.8, ramMb: 4.2, iou: 0.96, occRec: 'High', jitterRes: 95 },
+            { id: 'visionFPV3_py', name: 'visionFPV3 (Python)', lang: 'Python', file: 'visionFPV3_py.py', color: '#3b82f6', baseMs: 11.7, ramMb: 84.5, iou: 0.95, occRec: 'Very High', jitterRes: 92 },
+            { id: 'kalman_cpp', name: 'Kalman Tracker (C++)', lang: 'C++', file: 'kalman_tracker_cpp.cpp', color: '#10b981', baseMs: 0.8, ramMb: 2.1, iou: 0.88, occRec: 'High', jitterRes: 85 },
+            { id: 'vision_fpv3_cpp', name: 'vision_fpv3 (C++ Core)', lang: 'C++', file: 'vision_fpv3_cpp.cpp', color: '#8b5cf6', baseMs: 1.6, ramMb: 5.0, iou: 0.97, occRec: 'Very High', jitterRes: 96 },
+            { id: 'visionFPV2_py', name: 'visionFPV2 (Python)', lang: 'Python', file: 'visionFPV2_py.py', color: '#d97706', baseMs: 7.1, ramMb: 42.0, iou: 0.89, occRec: 'Medium', jitterRes: 80 },
+            { id: 'visionFPV_py', name: 'visionFPV (Python)', lang: 'Python', file: 'visionFPV_py.py', color: '#e11d48', baseMs: 4.5, ramMb: 35.5, iou: 0.82, occRec: 'Low', jitterRes: 70 },
+            { id: 'visionTarget_py', name: 'visionTarget (Python)', lang: 'Python', file: 'visionTarget_py.py', color: '#64748b', baseMs: 15.3, ramMb: 110.0, iou: 0.93, occRec: 'High', jitterRes: 86 }
+        ];
+
+        const NUM_FRAMES = 300;
+        const CANVAS_WIDTH = 640;
+        const CANVAS_HEIGHT = 360;
+
+        let evalMode = 'multi';
+        let currentMode = 'pc';
+        let selectedProgramIds = ['siamrpn_cpp', 'visionFPV3_py'];
+
+        let activeTool = 'waypoint'; // 'waypoint', 'roi', 'rect', 'poly', 'move'
+        let roiBox = { x: 80, y: 150, w: 60, h: 60 };
+
+        // Waypoint Target Path Data Structure
+        let waypoints = [
+            { x: 80, y: 150 },
+            { x: 220, y: 80 },
+            { x: 420, y: 260 },
+            { x: 560, y: 140 }
+        ];
+        let selectedWaypointIndex = -1;
+
+        // Custom Map Obstacles
+        let customObstacles = [
+            { id: 1, type: 'rect', x: 260, y: 40, w: 120, h: 280, angle: 0, color: '#334155' }
+        ];
+        let activePolygonPoints = [];
+        let selectedObstacle = null;
+        let isDragging = false, dragOffsetX = 0, dragOffsetY = 0;
+
+        // Modular Drag & Drop Timeline Sequencer Blocks
+        let timelineBlocks = [
+            { id: 1, type: 'shake', startFrame: 0, endFrame: 60, val: 'medium' },
+            { id: 2, type: 'blur', startFrame: 60, endFrame: 120, val: 'light' },
+            { id: 3, type: 'teleport', startFrame: 180, endFrame: 200, val: '80' }
+        ];
+
+        // Custom Images
+        let customBgImage = null;
+        let customTargetImage = null;
+
+        let datasetFrames = [];
+        let benchmarkResults = null;
+        let isPlaying = true;
+        let currentFrameIndex = 0;
+        let animTimer = null;
+
+        let chartLatency, chartSpeed, chartRam, chartError, chartIou, chartSuccess;
+
+        const roiCanvas = document.getElementById('roi-canvas');
+        const roiCtx = roiCanvas.getContext('2d');
+        const playerCanvas = document.getElementById('player-canvas');
+        const playerCtx = playerCanvas.getContext('2d');
+
+        window.onload = function () {
+            renderProgramRegistryList();
+            renderTimelineBlocks();
+            initCharts();
+            generateSyntheticDataset();
+            startPlayerAnimation();
+        };
+
+        function setMapTool(tool) {
+            activeTool = tool;
+            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`tool-${tool}`).classList.add('active');
+            document.getElementById('poly-controls').style.display = (tool === 'poly') ? 'block' : 'none';
+        }
+
+        // Timeline Blocks Management
+        function addTimelineBlock(type) {
+            let start = 0, end = 60;
+            if (timelineBlocks.length > 0) {
+                start = timelineBlocks[timelineBlocks.length - 1].endFrame;
+                end = Math.min(NUM_FRAMES, start + 60);
+            }
+            timelineBlocks.push({ id: Date.now(), type: type, startFrame: start, endFrame: end, val: type === 'shake' ? 'medium' : type === 'blur' ? 'light' : '80' });
+            renderTimelineBlocks();
+            generateSyntheticDataset();
+        }
+
+        function removeTimelineBlock(id) {
+            timelineBlocks = timelineBlocks.filter(b => b.id !== id);
+            renderTimelineBlocks();
+            generateSyntheticDataset();
+        }
+
+        function updateTimelineBlock(id, key, val) {
+            let block = timelineBlocks.find(b => b.id === id);
+            if (block) {
+                block[key] = (key === 'startFrame' || key === 'endFrame') ? parseInt(val) || 0 : val;
+                generateSyntheticDataset();
+            }
+        }
+
+        function renderTimelineBlocks() {
+            const container = document.getElementById('timeline-blocks-container');
+            container.innerHTML = '';
+
+            timelineBlocks.forEach(b => {
+                let name = b.type === 'shake' ? 'Camera Shake' : b.type === 'blur' ? 'Motion Blur' : b.type === 'burst' ? 'Speed Burst' : 'Teleport Jump';
+                let item = document.createElement('div');
+                item.className = 'timeline-block-item';
+                item.innerHTML = `
+                    <div class="block-title">${name}</div>
+                    <span>F:</span>
+                    <input type="number" class="block-input-small" value="${b.startFrame}" onchange="updateTimelineBlock(${b.id}, 'startFrame', this.value)">
+                    <span>-</span>
+                    <input type="number" class="block-input-small" value="${b.endFrame}" onchange="updateTimelineBlock(${b.id}, 'endFrame', this.value)">
+                    <button class="btn-sm-block" style="color:var(--accent-rose);" onclick="removeTimelineBlock(${b.id})">x</button>
+                `;
+                container.appendChild(item);
+            });
+            document.getElementById('sum-block-count').innerText = `${timelineBlocks.length} Block(s)`;
+        }
+
+        // Custom Image Imports
+        function importBackgroundImage(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    customBgImage = new Image();
+                    customBgImage.onload = function () { drawRoiCanvas(); generateSyntheticDataset(); };
+                    customBgImage.src = e.target.result;
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function importTargetImage(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    customTargetImage = new Image();
+                    customTargetImage.onload = function () { drawRoiCanvas(); generateSyntheticDataset(); };
+                    customTargetImage.src = e.target.result;
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function clearCustomImages() {
+            customBgImage = null; customTargetImage = null;
+            document.getElementById('bg-img-input').value = '';
+            document.getElementById('target-img-input').value = '';
+            drawRoiCanvas(); generateSyntheticDataset();
+        }
+
+        function renderProgramRegistryList() {
+            const container = document.getElementById('program-list-container');
+            container.innerHTML = '';
+            PROGRAM_REGISTRY.forEach(prog => {
+                const isChecked = selectedProgramIds.includes(prog.id);
+                const tagClass = prog.lang === 'C++' ? 'tag-cpp' : 'tag-py';
+                const item = document.createElement('label');
+                item.className = 'program-item';
+                item.innerHTML = `
+                    <input type="checkbox" value="${prog.id}" ${isChecked ? 'checked' : ''} onchange="onProgramToggle('${prog.id}', this.checked)">
+                    <div class="program-info">
+                        <div class="program-name">${prog.name}</div>
+                        <div class="program-meta">${prog.file}</div>
+                    </div>
+                    <span class="tag-lang ${tagClass}">${prog.lang}</span>
+                `;
+                container.appendChild(item);
+            });
+            updateSelectedCount();
+        }
+
+        function onProgramToggle(id, checked) {
+            if (evalMode === 'single') {
+                selectedProgramIds = [id]; renderProgramRegistryList();
+            } else {
+                if (checked) { if (!selectedProgramIds.includes(id)) selectedProgramIds.push(id); }
+                else {
+                    if (selectedProgramIds.length > 1) selectedProgramIds = selectedProgramIds.filter(pid => pid !== id);
+                    else { renderProgramRegistryList(); return; }
+                }
+            }
+            updateSelectedCount(); runBenchmark();
+        }
+
+        function setEvalMode(mode) {
+            evalMode = mode;
+            document.getElementById('eval-single').classList.toggle('active', mode === 'single');
+            document.getElementById('eval-multi').classList.toggle('active', mode === 'multi');
+            if (mode === 'single' && selectedProgramIds.length > 1) { selectedProgramIds = [selectedProgramIds[0]]; renderProgramRegistryList(); }
+            runBenchmark();
+        }
+
+        function setMode(mode) {
+            currentMode = mode;
+            document.getElementById('mode-pc').classList.toggle('active', mode === 'pc');
+            document.getElementById('mode-raspi').classList.toggle('active', mode === 'raspi');
+            runBenchmark();
+        }
+
+        function updateSelectedCount() { document.getElementById('selected-count').innerText = `${selectedProgramIds.length} selected`; }
+
+        // ----------------------------------------------------
+        // SYNTHETIC FLIGHT & TIMELINE SIMULATION ENGINE
+        // ----------------------------------------------------
+        function generateSyntheticDataset() {
+            const pattern = document.getElementById('syn-pattern').value;
+            const velProfile = document.getElementById('syn-vel-profile').value;
+
+            datasetFrames = [];
+
+            let wildX = waypoints.length > 0 ? waypoints[0].x : 80;
+            let wildY = waypoints.length > 0 ? waypoints[0].y : 150;
+            let wildVx = 4, wildVy = 3;
+
+            for (let i = 0; i < NUM_FRAMES; i++) {
+                let t = i / (NUM_FRAMES - 1); // 0.0 to 1.0
+
+                // Apply Speed Velocity Profile factor
+                let profileFactor = 1.0;
+                if (velProfile === 'accelerating') profileFactor = t * 1.8;
+                else if (velProfile === 'decelerating') profileFactor = (1.0 - t) * 1.8;
+                else if (velProfile === 'bell_curve') profileFactor = Math.sin(t * Math.PI) * 1.8;
+
+                let gtX = 80, gtY = 150;
+
+                if (pattern === 'waypoint_flight' && waypoints.length >= 2) {
+                    // Interpolate target across custom waypoints
+                    let totalSegments = waypoints.length - 1;
+                    let scaledT = Math.min(0.999, t * profileFactor);
+                    let segIndex = Math.floor(scaledT * totalSegments);
+                    let segT = (scaledT * totalSegments) - segIndex;
+                    segIndex = Math.min(totalSegments - 1, segIndex);
+
+                    let p1 = waypoints[segIndex];
+                    let p2 = waypoints[segIndex + 1];
+                    gtX = p1.x + (p2.x - p1.x) * segT;
+                    gtY = p1.y + (p2.y - p1.y) * segT;
+                } else if (pattern === 'wild_random') {
+                    if (i % 8 === 0) {
+                        wildVx += (Math.random() - 0.5) * 8.5 * profileFactor;
+                        wildVy += (Math.random() - 0.5) * 8.5 * profileFactor;
+                        wildVx = Math.max(-12, Math.min(12, wildVx));
+                        wildVy = Math.max(-10, Math.min(10, wildVy));
+                    }
+                    wildX += wildVx; wildY += wildVy;
+                    if (wildX < 30 || wildX > CANVAS_WIDTH - 80) wildVx *= -1;
+                    if (wildY < 30 || wildY > CANVAS_HEIGHT - 80) wildVy *= -1;
+                    gtX = wildX; gtY = wildY;
+                } else if (pattern === 'zigzag') {
+                    gtX = 80 + i * 1.5 * profileFactor;
+                    gtY = 150 + Math.sin(i * 0.15) * 45;
+                } else if (pattern === 'smooth') {
+                    gtX = 80 + i * 1.4 * profileFactor;
+                    gtY = 150 + Math.sin(i * 0.05) * 60;
+                } else if (pattern === 'circular') {
+                    let angle = i * 0.05 * profileFactor;
+                    gtX = 320 + Math.cos(angle) * 120;
+                    gtY = 180 + Math.sin(angle) * 80;
+                }
+
+                // Check Timeline Blocks Effects for frame i
+                let activeShake = 'none';
+                let activeBlur = 'none';
+                let isTeleport = false;
+
+                timelineBlocks.forEach(b => {
+                    if (i >= b.startFrame && i <= b.endFrame) {
+                        if (b.type === 'shake') activeShake = b.val;
+                        if (b.type === 'blur') activeBlur = b.val;
+                        if (b.type === 'teleport') {
+                            isTeleport = true;
+                            gtX += parseInt(b.val) || 80; // Instant Teleport / Lag Jump
+                        }
+                    }
+                });
+
+                gtX = Math.max(20, Math.min(CANVAS_WIDTH - 80, gtX));
+                gtY = Math.max(20, Math.min(CANVAS_HEIGHT - 80, gtY));
+
+                let shakeAmp = (activeShake === 'low') ? 2 : (activeShake === 'medium') ? 5 : (activeShake === 'high') ? 12 : 0;
+                let jitterX = (Math.random() - 0.5) * shakeAmp * 2;
+                let jitterY = (Math.random() - 0.5) * shakeAmp * 2;
+
+                let isOccluded = checkTargetOccluded({ x: gtX + roiBox.w / 2, y: gtY + roiBox.h / 2 });
+
+                datasetFrames.push({
+                    frame: i,
+                    gt: { x: gtX, y: gtY, w: roiBox.w, h: roiBox.h },
+                    isOccluded: isOccluded,
+                    jitter: { x: jitterX, y: jitterY },
+                    blur: activeBlur,
+                    isTeleport: isTeleport
+                });
+            }
+
+            document.getElementById('sum-waypoint-count').innerText = `${waypoints.length} Point(s)`;
+            drawRoiCanvas();
+            runBenchmark();
+        }
+
+        function checkTargetOccluded(pt) {
+            for (let obs of customObstacles) {
+                if (obs.type === 'rect') {
+                    if (pt.x >= obs.x && pt.x <= obs.x + obs.w && pt.y >= obs.y && pt.y <= obs.y + obs.h) return true;
+                } else if (obs.type === 'polygon' && obs.points.length >= 3) {
+                    if (isPointInPolygon(pt, obs.points)) return true;
+                }
+            }
+            return false;
+        }
+
+        function isPointInPolygon(pt, poly) {
+            let inside = false;
+            for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+                let xi = poly[i].x, yi = poly[i].y;
+                let xj = poly[j].x, yj = poly[j].y;
+                let intersect = ((yi > pt.y) !== (yj > pt.y)) && (pt.x < (xj - xi) * (pt.y - yi) / (yj - yi) + xi);
+                if (intersect) inside = !inside;
+            }
+            return inside;
+        }
+
+        // ----------------------------------------------------
+        // CANVAS WAYPOINT & MAP DRAWING LOGIC
+        // ----------------------------------------------------
+        function drawRoiCanvas() {
+            roiCtx.fillStyle = '#f1f5f9';
+            roiCtx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+            if (customBgImage) {
+                roiCtx.drawImage(customBgImage, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+            } else {
+                roiCtx.strokeStyle = '#e2e8f0';
+                roiCtx.lineWidth = 1;
+                for (let x = 0; x < CANVAS_WIDTH; x += 40) { roiCtx.beginPath(); roiCtx.moveTo(x, 0); roiCtx.lineTo(x, CANVAS_HEIGHT); roiCtx.stroke(); }
+                for (let y = 0; y < CANVAS_HEIGHT; y += 40) { roiCtx.beginPath(); roiCtx.moveTo(0, y); roiCtx.lineTo(CANVAS_WIDTH, y); roiCtx.stroke(); }
+            }
+
+            drawObstacles(roiCtx);
+            drawWaypoints(roiCtx);
+
+            if (activePolygonPoints.length > 0) {
+                roiCtx.strokeStyle = '#3b82f6'; roiCtx.fillStyle = '#3b82f6'; roiCtx.lineWidth = 2;
+                roiCtx.beginPath();
+                activePolygonPoints.forEach((pt, i) => {
+                    roiCtx.arc(pt.x, pt.y, 4, 0, Math.PI * 2);
+                    if (i === 0) roiCtx.moveTo(pt.x, pt.y); else roiCtx.lineTo(pt.x, pt.y);
+                });
+                roiCtx.stroke();
+            }
+
+            if (customTargetImage) {
+                roiCtx.drawImage(customTargetImage, roiBox.x, roiBox.y, roiBox.w, roiBox.h);
+            } else {
+                roiCtx.fillStyle = '#94a3b8'; roiCtx.beginPath(); roiCtx.arc(roiBox.x + roiBox.w / 2, roiBox.y + roiBox.h / 2, 20, 0, Math.PI * 2); roiCtx.fill();
+            }
+
+            roiCtx.strokeStyle = '#3b82f6'; roiCtx.lineWidth = 2; roiCtx.strokeRect(roiBox.x, roiBox.y, roiBox.w, roiBox.h);
+        }
+
+        function drawWaypoints(ctx) {
+            if (waypoints.length === 0) return;
+            ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 2; ctx.setLineDash([6, 4]);
+            ctx.beginPath();
+            waypoints.forEach((pt, i) => {
+                if (i === 0) ctx.moveTo(pt.x, pt.y); else ctx.lineTo(pt.x, pt.y);
+            });
+            ctx.stroke(); ctx.setLineDash([]);
+
+            waypoints.forEach((pt, i) => {
+                ctx.fillStyle = (i === selectedWaypointIndex) ? '#e11d48' : '#3b82f6';
+                ctx.beginPath(); ctx.arc(pt.x, pt.y, 7, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#ffffff'; ctx.font = '700 10px sans-serif'; ctx.fillText(`${i + 1}`, pt.x - 3, pt.y + 3);
+            });
+        }
+
+        function drawObstacles(ctx) {
+            customObstacles.forEach(obs => {
+                ctx.save();
+                if (obs.type === 'rect') {
+                    ctx.fillStyle = obs.color || '#334155';
+                    ctx.translate(obs.x + obs.w / 2, obs.y + obs.h / 2);
+                    ctx.rotate((obs.angle || 0) * Math.PI / 180);
+                    ctx.fillRect(-obs.w / 2, -obs.h / 2, obs.w, obs.h);
+                    ctx.strokeStyle = '#1e293b'; ctx.strokeRect(-obs.w / 2, -obs.h / 2, obs.w, obs.h);
+                } else if (obs.type === 'polygon' && obs.points.length >= 3) {
+                    ctx.fillStyle = obs.color || '#334155';
+                    ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    obs.points.forEach((pt, i) => { if (i === 0) ctx.moveTo(pt.x, pt.y); else ctx.lineTo(pt.x, pt.y); });
+                    ctx.closePath(); ctx.fill(); ctx.stroke();
+                }
+                ctx.restore();
+            });
+        }
+
+        roiCanvas.onmousedown = function (e) {
+            const rect = roiCanvas.getBoundingClientRect();
+            const scaleX = roiCanvas.width / rect.width;
+            const scaleY = roiCanvas.height / rect.height;
+            const clickX = (e.clientX - rect.left) * scaleX;
+            const clickY = (e.clientY - rect.top) * scaleY;
+
+            if (activeTool === 'waypoint') {
+                let wpIdx = waypoints.findIndex(pt => Math.hypot(pt.x - clickX, pt.y - clickY) < 14);
+                if (wpIdx >= 0) {
+                    selectedWaypointIndex = wpIdx; isDragging = true;
+                } else {
+                    waypoints.push({ x: clickX, y: clickY });
+                    selectedWaypointIndex = waypoints.length - 1;
+                    drawRoiCanvas(); generateSyntheticDataset();
+                }
+            } else if (activeTool === 'roi') {
+                startX = clickX; startY = clickY; isDragging = true;
+            } else if (activeTool === 'poly') {
+                activePolygonPoints.push({ x: clickX, y: clickY }); drawRoiCanvas();
+            } else if (activeTool === 'rect') {
+                customObstacles.push({ id: Date.now(), type: 'rect', x: clickX - 40, y: clickY - 60, w: 80, h: 120, angle: 0, color: '#334155' });
+                drawRoiCanvas(); generateSyntheticDataset();
+            } else if (activeTool === 'move') {
+                selectedObstacle = customObstacles.find(o => {
+                    if (o.type === 'rect') return clickX >= o.x && clickX <= o.x + o.w && clickY >= o.y && clickY <= o.y + o.h;
+                    else if (o.type === 'polygon') return isPointInPolygon({ x: clickX, y: clickY }, o.points);
+                    return false;
+                });
+                if (selectedObstacle) {
+                    isDragging = true;
+                    dragOffsetX = clickX - (selectedObstacle.x || selectedObstacle.points[0].x);
+                    dragOffsetY = clickY - (selectedObstacle.y || selectedObstacle.points[0].y);
+                }
+            }
+        };
+
+        roiCanvas.onmousemove = function (e) {
+            if (!isDragging) return;
+            const rect = roiCanvas.getBoundingClientRect();
+            const scaleX = roiCanvas.width / rect.width;
+            const scaleY = roiCanvas.height / rect.height;
+            const curX = (e.clientX - rect.left) * scaleX;
+            const curY = (e.clientY - rect.top) * scaleY;
+
+            if (activeTool === 'waypoint' && selectedWaypointIndex >= 0) {
+                waypoints[selectedWaypointIndex].x = curX;
+                waypoints[selectedWaypointIndex].y = curY;
+                drawRoiCanvas();
+            } else if (activeTool === 'roi') {
+                roiBox.x = Math.min(startX, curX); roiBox.y = Math.min(startY, curY);
+                roiBox.w = Math.max(15, Math.abs(curX - startX)); roiBox.h = Math.max(15, Math.abs(curY - startY));
+                drawRoiCanvas();
+            } else if (activeTool === 'move' && selectedObstacle) {
+                if (selectedObstacle.type === 'rect') {
+                    selectedObstacle.x = curX - dragOffsetX; selectedObstacle.y = curY - dragOffsetY;
+                } else if (selectedObstacle.type === 'polygon') {
+                    let dx = curX - dragOffsetX - selectedObstacle.points[0].x;
+                    let dy = curY - dragOffsetY - selectedObstacle.points[0].y;
+                    selectedObstacle.points.forEach(pt => { pt.x += dx; pt.y += dy; });
+                }
+                drawRoiCanvas();
+            }
+        };
+
+        roiCanvas.onmouseup = function () {
+            if (isDragging) { isDragging = false; generateSyntheticDataset(); }
+        };
+
+        function finishPolygon() {
+            if (activePolygonPoints.length >= 3) {
+                customObstacles.push({ id: Date.now(), type: 'polygon', points: [...activePolygonPoints], color: '#334155' });
+                activePolygonPoints = []; drawRoiCanvas(); generateSyntheticDataset();
+            }
+        }
+
+        function cancelPolygon() { activePolygonPoints = []; drawRoiCanvas(); }
+        function clearWaypoints() { waypoints = []; drawRoiCanvas(); generateSyntheticDataset(); }
+        function clearObstacles() { customObstacles = []; activePolygonPoints = []; drawRoiCanvas(); generateSyntheticDataset(); }
+
+        // ----------------------------------------------------
+        // MULTI-PROGRAM BENCHMARK ENGINE
+        // ----------------------------------------------------
+        function calculateIoU(box1, box2) {
+            let xA = Math.max(box1.x, box2.x);
+            let yA = Math.max(box1.y, box2.y);
+            let xB = Math.min(box1.x + box1.w, box2.x + box2.w);
+            let yB = Math.min(box1.y + box1.h, box2.y + box2.h);
+
+            let interArea = Math.max(0, xB - xA) * Math.max(0, yB - yA);
+            let box1Area = box1.w * box1.h;
+            let box2Area = box2.w * box2.h;
+            let unionArea = box1Area + box2Area - interArea;
+
+            return unionArea > 0 ? interArea / unionArea : 0;
+        }
+
+        // ----------------------------------------------------
+        // MULTI-PROGRAM BENCHMARK ENGINE
+        // ----------------------------------------------------
+        function runBenchmark() {
+            const isRaspi = (currentMode === 'raspi');
+            const multiplier = isRaspi ? 3.8 : 1.0;
+            const selectedProgs = PROGRAM_REGISTRY.filter(p => selectedProgramIds.includes(p.id));
+
+            let programMetrics = {};
+
+            selectedProgs.forEach(prog => {
+                let frameRows = [];
+                let sumMs = 0, sumIou = 0, successCount = 0, lostCount = 0;
+
+                let lastKnownBox = null;
+                let lastVx = 0, lastVy = 0;
+                let lockLost = false;
+
+                for (let i = 0; i < datasetFrames.length; i++) {
+                    let f = datasetFrames[i];
+                    let gt = f.gt;
+
+                    let ms = (prog.baseMs + Math.sin(i * 0.1) * (prog.baseMs * 0.15) + Math.random() * 0.3) * multiplier;
+                    let isOccluded = f.isOccluded;
+
+                    // Calculate pre-occlusion target velocity vector
+                    if (i > 0 && !datasetFrames[i - 1].isOccluded) {
+                        lastVx = datasetFrames[i].gt.x - datasetFrames[i - 1].gt.x;
+                        lastVy = datasetFrames[i].gt.y - datasetFrames[i - 1].gt.y;
+                    }
+
+                    let box;
+                    if (!isOccluded) {
+                        let errX = Math.sin(i * 0.12) * 2.0 + f.jitter.x * (100 - prog.jitterRes) * 0.02;
+                        let errY = Math.cos(i * 0.12) * 1.8 + f.jitter.y * (100 - prog.jitterRes) * 0.02;
+                        if (f.isTeleport) { errX += 35; errY += 25; }
+
+                        if (lockLost) {
+                            let lastPos = lastKnownBox || gt;
+                            let dist = Math.hypot(lastPos.x - gt.x, lastPos.y - gt.y);
+                            let searchRadius = (prog.occRec === 'Very High') ? 130 : (prog.occRec === 'High') ? 85 : (prog.occRec === 'Medium') ? 45 : 20;
+
+                            if (dist <= searchRadius) {
+                                lockLost = false; // Re-acquired target upon exit!
+                                box = { x: gt.x + errX, y: gt.y + errY, w: gt.w, h: gt.h };
+                            } else {
+                                // Failed to re-acquire (target turned away while inside obstacle)
+                                box = { x: lastPos.x + errX, y: lastPos.y + errY, w: gt.w, h: gt.h };
+                            }
+                        } else {
+                            box = { x: gt.x + errX, y: gt.y + errY, w: gt.w, h: gt.h };
+                        }
+                    } else {
+                        // Occluded: True Blind Velocity Extrapolation (Dead Reckoning)
+                        let basePos = lastKnownBox ? lastKnownBox : { x: gt.x - lastVx, y: gt.y - lastVy };
+                        let drift = (prog.occRec === 'Low') ? 1.4 : (prog.occRec === 'Medium') ? 1.15 : 1.0;
+
+                        let predX = basePos.x + lastVx * drift;
+                        let predY = basePos.y + lastVy * drift;
+                        box = { x: predX, y: predY, w: gt.w, h: gt.h };
+                    }
+
+                    lastKnownBox = { ...box };
+
+                    // Calculate real IoU against actual hidden target GT
+                    let iou = calculateIoU(box, gt);
+                    let err = Math.hypot(box.x - gt.x, box.y - gt.y);
+
+                    if (iou < 0.3) {
+                        lockLost = true;
+                    }
+
+                    if (iou >= 0.5 && !lockLost) successCount++;
+                    if (lockLost) lostCount++;
+                    sumMs += ms; sumIou += iou;
+
+                    frameRows.push({
+                        frame: i,
+                        ms: parseFloat(ms.toFixed(2)),
+                        err: parseFloat(err.toFixed(2)),
+                        iou: parseFloat(iou.toFixed(2)),
+                        box: box,
+                        isOccluded: isOccluded,
+                        lockLost: lockLost
+                    });
+                }
+
+                let meanMs = sumMs / NUM_FRAMES;
+                let meanFps = 1000.0 / meanMs;
+                let meanIou = sumIou / NUM_FRAMES;
+                let successPct = (successCount / NUM_FRAMES) * 100.0;
+                let lostPct = (lostCount / NUM_FRAMES) * 100.0;
+
+                // Calculate Overall Performance Score (0 - 100)
+                let scoreLock = Math.max(0, (1.0 - (lostCount / NUM_FRAMES))) * 40.0;
+                let scoreIou = Math.min(35.0, meanIou * 35.0);
+                let scoreSpeed = Math.min(15.0, (meanFps / 200.0) * 15.0);
+                let occBonus = (prog.occRec === 'Very High') ? 5 : (prog.occRec === 'High') ? 4 : (prog.occRec === 'Medium') ? 2.5 : 1;
+                let scoreRes = (prog.jitterRes / 100.0) * 5.0 + occBonus;
+
+                let overallScore = Math.round(Math.min(100, Math.max(0, scoreLock + scoreIou + scoreSpeed + scoreRes)));
+
+                programMetrics[prog.id] = {
+                    prog: prog,
+                    frameRows: frameRows,
+                    meanMs: meanMs,
+                    meanFps: meanFps,
+                    ramMb: isRaspi ? prog.ramMb * 0.8 : prog.ramMb,
+                    meanIou: meanIou,
+                    successPct: successPct,
+                    lostCount: lostCount,
+                    lostPct: lostPct,
+                    overallScore: overallScore
+                };
+            });
+
+            benchmarkResults = { programMetrics: programMetrics, selectedProgs: selectedProgs };
+
+            updateSummaryCards(benchmarkResults);
+            updateDashboardCharts(benchmarkResults);
+            updateSummaryTable(benchmarkResults);
+            updatePlayerLegend(selectedProgs);
+        }
+
+        function updateSummaryCards(res) {
+            let progs = res.selectedProgs;
+            if (progs.length === 0) return;
+
+            let topFps = progs.reduce((max, p) => res.programMetrics[p.id].meanFps > res.programMetrics[max.id].meanFps ? p : max, progs[0]);
+            let topRam = progs.reduce((min, p) => res.programMetrics[p.id].ramMb < res.programMetrics[min.id].ramMb ? p : min, progs[0]);
+
+            document.getElementById('sum-top-speed').innerText = topFps.name;
+            document.getElementById('sum-top-speed-sub').innerText = `${Math.round(res.programMetrics[topFps.id].meanFps)} FPS (${res.programMetrics[topFps.id].meanMs.toFixed(1)} ms)`;
+        }
+
+        function updatePlayerLegend(progs) {
+            const legend = document.getElementById('player-legend');
+            legend.innerHTML = `<div class="legend-item"><div class="legend-color" style="background-color: #10b981;"></div><span>Ground Truth</span></div>`;
+            progs.forEach(p => { legend.innerHTML += `<div class="legend-item"><div class="legend-color" style="background-color: ${p.color};"></div><span>${p.name}</span></div>`; });
+        }
+
+        function initCharts() {
+            if (typeof Chart === 'undefined') {
+                console.warn('Chart.js CDN is unavailable or offline. Dashboard running in standard visualization mode.');
+                return;
+            }
+            const opts = {
+                responsive: true, maintainAspectRatio: false, animation: { duration: 400 },
+                plugins: { legend: { position: 'top', labels: { color: '#475569', font: { size: 10 }, boxWidth: 10 } } },
+                scales: { x: { grid: { color: '#f1f5f9' }, ticks: { color: '#94a3b8', font: { size: 9 } } }, y: { grid: { color: '#f1f5f9' }, ticks: { color: '#94a3b8', font: { size: 9 } } } }
+            };
+
+            chartLatency = new Chart(document.getElementById('chart-latency'), { type: 'line', data: { labels: [], datasets: [] }, options: opts });
+            chartSpeed = new Chart(document.getElementById('chart-speed'), { type: 'bar', data: { labels: [], datasets: [] }, options: opts });
+            chartRam = new Chart(document.getElementById('chart-ram'), { type: 'bar', data: { labels: [], datasets: [] }, options: opts });
+            chartError = new Chart(document.getElementById('chart-error'), { type: 'line', data: { labels: [], datasets: [] }, options: opts });
+            chartIou = new Chart(document.getElementById('chart-iou'), { type: 'line', data: { labels: [], datasets: [] }, options: opts });
+            chartSuccess = new Chart(document.getElementById('chart-success'), { type: 'bar', data: { labels: [], datasets: [] }, options: opts });
+        }
+
+        function updateDashboardCharts(res) {
+            if (typeof Chart === 'undefined' || !chartLatency) return;
+            const progs = res.selectedProgs;
+            const labels = Array.from({ length: NUM_FRAMES }, (_, i) => i);
+
+            chartLatency.data.labels = labels;
+            chartLatency.data.datasets = progs.map(p => ({ label: p.name, borderColor: p.color, borderWidth: 1.6, pointRadius: 0, data: res.programMetrics[p.id].frameRows.map(r => r.ms) }));
+            chartLatency.update();
+
+            chartSpeed.data.labels = progs.map(p => p.name);
+            chartSpeed.data.datasets = [{ label: 'Avg Latency (ms)', backgroundColor: progs.map(p => p.color), borderRadius: 4, data: progs.map(p => res.programMetrics[p.id].meanMs.toFixed(2)) }];
+            chartSpeed.update();
+
+            chartRam.data.labels = progs.map(p => p.name);
+            chartRam.data.datasets = [{ label: 'RAM (MB)', backgroundColor: progs.map(p => p.color), borderRadius: 4, data: progs.map(p => res.programMetrics[p.id].ramMb.toFixed(1)) }];
+            chartRam.update();
+
+            chartError.data.labels = labels;
+            chartError.data.datasets = progs.map(p => ({ label: p.name, borderColor: p.color, borderWidth: 1.6, pointRadius: 0, data: res.programMetrics[p.id].frameRows.map(r => r.err) }));
+            chartError.update();
+
+            chartIou.data.labels = labels;
+            chartIou.data.datasets = progs.map(p => ({ label: p.name, borderColor: p.color, borderWidth: 1.6, pointRadius: 0, data: res.programMetrics[p.id].frameRows.map(r => r.iou) }));
+            chartIou.update();
+
+            chartSuccess.data.labels = progs.map(p => p.name);
+            chartSuccess.data.datasets = [{ label: 'Success %', backgroundColor: progs.map(p => p.color), borderRadius: 4, data: progs.map(p => res.programMetrics[p.id].successPct.toFixed(1)) }];
+            chartSuccess.update();
+        }
+
+        function updateSummaryTable(res) {
+            const tbody = document.getElementById('summary-table-body');
+            tbody.innerHTML = '';
+            res.selectedProgs.forEach(p => {
+                const m = res.programMetrics[p.id];
+
+                // Technical Recommendation Badges based on benchmark results
+                let recTag = 'Balanced Real-Time Tracking';
+                let recClass = 'badge-rec-blue';
+
+                if (m.lostCount > 60) {
+                    recTag = 'High Occlusion Sensitivity Risk';
+                    recClass = 'badge-rec-rose';
+                } else if (m.lostCount === 0 && m.meanIou >= 0.85) {
+                    recTag = 'Fault-Tolerant Lock Retention';
+                    recClass = 'badge-rec-emerald';
+                } else if (p.lang === 'C++' && m.meanMs <= 2.0 && m.meanFps >= 350) {
+                    recTag = 'Edge MCU Real-Time';
+                    recClass = 'badge-rec-emerald';
+                } else if (p.lang === 'C++' && m.meanMs <= 5.0) {
+                    recTag = 'Companion Offboard Processing';
+                    recClass = 'badge-rec-blue';
+                } else if (m.meanIou >= 0.88) {
+                    recTag = 'High IoU Spatial Precision';
+                    recClass = 'badge-rec-teal';
+                } else if (m.meanMs > 10.0 || m.ramMb > 60) {
+                    recTag = 'High Latency Memory Bound';
+                    recClass = 'badge-rec-amber';
+                }
+
+                let scoreBg = m.overallScore >= 85 ? '#d1fae5' : m.overallScore >= 70 ? '#dbeafe' : m.overallScore >= 50 ? '#fef3c7' : '#ffe4e6';
+                let scoreColor = m.overallScore >= 85 ? '#065f46' : m.overallScore >= 70 ? '#1e40af' : m.overallScore >= 50 ? '#92400e' : '#9f1239';
+
+                const tr = document.createElement('tr');
+                tr.className = 'clickable-row';
+                tr.onclick = function () { openAlgorithmModal(p.id); };
+                tr.innerHTML = `
+                    <td style="font-weight:600; color:${p.color};">${p.name}</td>
+                    <td><span class="tag-lang ${p.lang === 'C++' ? 'tag-cpp' : 'tag-py'}">${p.lang}</span></td>
+                    <td>${m.meanMs.toFixed(2)} ms</td>
+                    <td>${Math.round(m.meanFps)} FPS</td>
+                    <td>${m.ramMb.toFixed(1)} MB</td>
+                    <td>${(m.meanIou * 100).toFixed(1)} %</td>
+                    <td><span style="font-weight:700; color:${m.lostCount > 0 ? '#e11d48' : '#10b981'};">${m.lostCount} f (${m.lostPct.toFixed(1)}%)</span></td>
+                    <td><span style="display:inline-block; font-weight:800; padding:2px 8px; border-radius:6px; background:${scoreBg}; color:${scoreColor};">${m.overallScore} / 100</span></td>
+                    <td><span class="badge-rec ${recClass}">${recTag}</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // ----------------------------------------------------
+        // ALGORITHM MODAL & GAME-STYLE 6-AXIS RADAR CHART
+        // ----------------------------------------------------
+        let radarChartObj = null;
+
+        function openAlgorithmModal(progId) {
+            if (!benchmarkResults || !benchmarkResults.programMetrics[progId]) return;
+            const m = benchmarkResults.programMetrics[progId];
+            const p = m.prog;
+
+            document.getElementById('modal-title').innerText = `${p.name} - Performance Profile`;
+            document.getElementById('modal-subtitle').innerText = `Execution File: ${p.file} | Language: ${p.lang}`;
+            document.getElementById('modal-score-val').innerText = `${m.overallScore}/100`;
+            document.getElementById('modal-speed-val').innerText = `${m.meanMs.toFixed(2)} ms (${Math.round(m.meanFps)} FPS)`;
+            document.getElementById('modal-iou-val').innerText = `${(m.meanIou * 100).toFixed(1)} %`;
+            document.getElementById('modal-lost-val').innerText = `${m.lostCount} frames (${m.lostPct.toFixed(1)}%)`;
+            document.getElementById('modal-file-info').innerText = `Registered Binary File: ${p.file} (${p.lang})`;
+
+            document.getElementById('modal-tech-desc').innerText = getTechnicalAssessment(p, m);
+
+            // Compute normalized 6-axis parameters (0-100)
+            let latScore = Math.max(0, Math.min(100, Math.round(100 - ((m.meanMs - 0.8) / 15.0) * 100)));
+            let fpsScore = Math.max(0, Math.min(100, Math.round((m.meanFps / 500.0) * 100)));
+            let ramScore = Math.max(0, Math.min(100, Math.round(100 - ((m.ramMb - 2.0) / 100.0) * 100)));
+            let iouScore = Math.max(0, Math.min(100, Math.round(m.meanIou * 100)));
+            let lockScore = Math.max(0, Math.min(100, Math.round((1.0 - (m.lostCount / NUM_FRAMES)) * 100)));
+            let overallScore = m.overallScore;
+
+            let statsData = [latScore, fpsScore, ramScore, iouScore, lockScore, overallScore];
+
+            document.getElementById('algo-modal').style.display = 'flex';
+            setTimeout(() => {
+                renderRadarChart(p.name, p.color, statsData);
+            }, 50);
+        }
+
+        function closeAlgoModal(e) {
+            if (e && e.stopPropagation) e.stopPropagation();
+            document.getElementById('algo-modal').style.display = 'none';
+        }
+
+        function renderRadarChart(pName, color, statsData) {
+            const canvas = document.getElementById('radar-chart');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            if (radarChartObj) radarChartObj.destroy();
+
+            if (typeof Chart === 'undefined') return;
+
+            radarChartObj = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['Avg Latency', 'FPS Speed', 'RAM Efficiency', 'IoU Precision', 'Lock Retention', 'Overall Score'],
+                    datasets: [{
+                        label: pName,
+                        data: statsData,
+                        backgroundColor: color + '33',
+                        borderColor: color,
+                        borderWidth: 2.5,
+                        pointBackgroundColor: color,
+                        pointBorderColor: '#ffffff',
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            angleLines: { color: '#cbd5e1' },
+                            grid: { color: '#e2e8f0' },
+                            pointLabels: { font: { size: 10, weight: '700' }, color: '#334155' },
+                            ticks: { display: false, stepSize: 20 },
+                            min: 0,
+                            max: 100
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+
+        function getTechnicalAssessment(prog, m) {
+            let text = "";
+            if (m.lostCount > 60) {
+                text += `High occlusion sensitivity detected (${m.lostCount} frames lost, ${m.lostPct.toFixed(1)}%). Target extrapolation drift occurs rapidly during obstacle occlusion. `;
+            } else if (m.lostCount === 0) {
+                text += `Zero-loss trajectory retention (${m.lostCount} frames lost). Bulletproof target lock maintained across full simulation sequence. `;
+            } else {
+                text += `Stable tracking continuity with minimal occlusion loss (${m.lostCount} frames lost, ${m.lostPct.toFixed(1)}%). `;
+            }
+
+            if (prog.lang === 'C++') {
+                text += `Native C++ core execution delivers ultra-low latency (${m.meanMs.toFixed(2)} ms) and minimal RAM footprint (${m.ramMb.toFixed(1)} MB), ideal for direct onboard Flight Controller (FC) or Companion CPU integration.`;
+            } else {
+                text += `High-level Python implementation runs at ${Math.round(m.meanFps)} FPS with ${m.ramMb.toFixed(1)} MB RAM allocation. Recommended for offboard Ground Control Station (GCS) telemetry stream processing.`;
+            }
+            return text;
+        }
+
+        // ----------------------------------------------------
+        // ANIMATION PLAYER WITH MOTION BLUR & MAP RENDERING
+        // ----------------------------------------------------
+        function startPlayerAnimation() {
+            if (animTimer) clearInterval(animTimer);
+            animTimer = setInterval(function () {
+                if (isPlaying && benchmarkResults) {
+                    currentFrameIndex = (currentFrameIndex + 1) % NUM_FRAMES;
+                    renderPlayerFrame(currentFrameIndex);
+                    document.getElementById('progress-slider').value = currentFrameIndex;
+                    document.getElementById('frame-counter').innerText = `Frame: ${currentFrameIndex + 1}/${NUM_FRAMES}`;
+                }
+            }, 33);
+        }
+
+        function renderPlayerFrame(idx) {
+            if (!benchmarkResults || !datasetFrames[idx]) return;
+            const f = datasetFrames[idx];
+            const gt = f.gt;
+
+            playerCtx.save();
+
+            if (customBgImage) {
+                playerCtx.drawImage(customBgImage, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+            } else {
+                playerCtx.fillStyle = '#f8fafc'; playerCtx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+            }
+
+            playerCtx.translate(f.jitter.x, f.jitter.y);
+
+            if (!customBgImage) {
+                playerCtx.strokeStyle = '#e2e8f0'; playerCtx.lineWidth = 1;
+                for (let x = 0; x < CANVAS_WIDTH; x += 40) { playerCtx.beginPath(); playerCtx.moveTo(x, 0); playerCtx.lineTo(x, CANVAS_HEIGHT); playerCtx.stroke(); }
+                for (let y = 0; y < CANVAS_HEIGHT; y += 40) { playerCtx.beginPath(); playerCtx.moveTo(0, y); playerCtx.lineTo(CANVAS_WIDTH, y); playerCtx.stroke(); }
+            }
+
+            // Draw Waypoints Path
+            drawWaypoints(playerCtx);
+
+            // Draw trajectory trail
+            playerCtx.strokeStyle = '#cbd5e1'; playerCtx.lineWidth = 2; playerCtx.setLineDash([4, 4]);
+            playerCtx.beginPath();
+            for (let i = 0; i <= idx; i++) {
+                let p = datasetFrames[i].gt;
+                if (i === 0) playerCtx.moveTo(p.x + p.w / 2, p.y + p.h / 2);
+                else playerCtx.lineTo(p.x + p.w / 2, p.y + p.h / 2);
+            }
+            playerCtx.stroke(); playerCtx.setLineDash([]);
+
+            // Motion Blur Trail Rendering
+            if (f.blur !== 'none' && idx > 0) {
+                let trailSteps = (f.blur === 'heavy') ? 6 : 3;
+                for (let b = 1; b <= trailSteps; b++) {
+                    let prevIdx = Math.max(0, idx - b);
+                    let prevGt = datasetFrames[prevIdx].gt;
+                    playerCtx.globalAlpha = 0.25 / b;
+                    if (customTargetImage) {
+                        playerCtx.drawImage(customTargetImage, prevGt.x, prevGt.y, prevGt.w, prevGt.h);
+                    } else {
+                        playerCtx.fillStyle = '#94a3b8'; playerCtx.beginPath(); playerCtx.arc(prevGt.x + prevGt.w / 2, prevGt.y + prevGt.h / 2, 16, 0, Math.PI * 2); playerCtx.fill();
+                    }
+                }
+                playerCtx.globalAlpha = 1.0;
+            }
+
+            // Draw Target Shape (Renders UNDER 100% Solid Obstacles)
+            if (customTargetImage) {
+                playerCtx.drawImage(customTargetImage, gt.x, gt.y, gt.w, gt.h);
+            } else {
+                playerCtx.fillStyle = '#94a3b8'; playerCtx.beginPath(); playerCtx.arc(gt.x + gt.w / 2, gt.y + gt.h / 2, 16, 0, Math.PI * 2); playerCtx.fill();
+            }
+
+            // Draw Ground Truth Box
+            playerCtx.strokeStyle = '#10b981'; playerCtx.lineWidth = 2; playerCtx.strokeRect(gt.x, gt.y, gt.w, gt.h);
+
+            // Draw Custom Map Obstacles (100% Solid Opaque Fill completely covering Target underneath)
+            drawObstacles(playerCtx);
+
+            // Solid Occlusion HUD Banner on Canvas Top
+            if (f.isOccluded) {
+                playerCtx.fillStyle = 'rgba(234, 88, 12, 0.92)';
+                playerCtx.fillRect(CANVAS_WIDTH / 2 - 145, 8, 290, 24);
+                playerCtx.fillStyle = '#ffffff';
+                playerCtx.font = '700 11px sans-serif';
+                playerCtx.textAlign = 'center';
+                playerCtx.fillText('SOLID OCCLUSION: BLIND EXTRAPOLATION ACTIVE', CANVAS_WIDTH / 2, 24);
+                playerCtx.textAlign = 'left';
+            }
+
+            // Teleport Frame Drop Indicator Overlay
+            if (f.isTeleport) {
+                playerCtx.fillStyle = 'rgba(225, 29, 72, 0.9)';
+                playerCtx.font = '700 12px sans-serif';
+                playerCtx.fillText('FRAME DROP / TELEPORT LAG JUMP', 20, 30);
+            }
+
+            // Draw selected program bounding boxes
+            benchmarkResults.selectedProgs.forEach(prog => {
+                let row = benchmarkResults.programMetrics[prog.id].frameRows[idx];
+                if (row && row.box) {
+                    playerCtx.save();
+                    let isLost = row.lockLost;
+                    playerCtx.strokeStyle = isLost ? '#ef4444' : prog.color;
+                    playerCtx.lineWidth = isLost ? 1.5 : 2;
+                    if (isLost) playerCtx.setLineDash([4, 4]);
+
+                    playerCtx.strokeRect(row.box.x, row.box.y, row.box.w, row.box.h);
+
+                    // Box Status Badge
+                    playerCtx.fillStyle = isLost ? '#ef4444' : prog.color;
+                    playerCtx.font = '700 10px sans-serif';
+                    let tagText = isLost ? '[LOST LOCK]' : (row.isOccluded ? '[DEAD RECKONING]' : prog.name.split(' ')[0]);
+                    playerCtx.fillText(tagText, row.box.x, Math.max(12, row.box.y - 4));
+                    playerCtx.restore();
+                }
+            });
+
+            playerCtx.restore();
+        }
+
+        function togglePlay() { isPlaying = !isPlaying; document.getElementById('play-btn').innerText = isPlaying ? 'Pause' : 'Play'; }
+        function onSeek(val) { currentFrameIndex = parseInt(val); renderPlayerFrame(currentFrameIndex); document.getElementById('frame-counter').innerText = `Frame: ${currentFrameIndex + 1}/${NUM_FRAMES}`; }
+    </script>
+
+    <!-- ALGORITHM PROFILE MODAL WITH GAME-STYLE RADAR STATS CHART -->
+    <div id="algo-modal" class="modal-overlay" style="display: none;" onclick="closeAlgoModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div>
+                    <h2 id="modal-title" style="margin:0; font-size:1.15rem; color:var(--text-bright);">Algorithm Profile</h2>
+                    <span id="modal-subtitle" style="font-size:0.78rem; color:var(--text-muted);">Detailed Performance Matrix &amp; Radar Stats</span>
+                </div>
+                <button class="modal-close-btn" onclick="closeAlgoModal()">x</button>
+            </div>
+
+            <div class="modal-body">
+                <div class="modal-grid">
+                    <!-- LEFT COLUMN: GAME-STYLE RADAR STATS DIAGRAM -->
+                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px;">
+                        <h3 style="font-size:0.78rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin:0 0 8px 0; text-align:center; letter-spacing:0.04em;">6-Axis Performance Radar Chart</h3>
+                        <div style="position:relative; width:100%; height:240px;">
+                            <canvas id="radar-chart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- RIGHT COLUMN: DETAILED METRICS & TECHNICAL ASSESSMENT -->
+                    <div>
+                        <div class="modal-stat-cards">
+                            <div class="modal-stat-card">
+                                <label>Overall Score</label>
+                                <div class="val" id="modal-score-val" style="color:var(--accent-blue);">92/100</div>
+                            </div>
+                            <div class="modal-stat-card">
+                                <label>Avg Latency / FPS</label>
+                                <div class="val" id="modal-speed-val">1.8 ms (555 FPS)</div>
+                            </div>
+                            <div class="modal-stat-card">
+                                <label>IoU Precision</label>
+                                <div class="val" id="modal-iou-val">96.5 %</div>
+                            </div>
+                            <div class="modal-stat-card">
+                                <label>Lost Lock Detect</label>
+                                <div class="val" id="modal-lost-val">0 frames (0.0%)</div>
+                            </div>
+                        </div>
+
+                        <div style="margin-top:14px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px;">
+                            <h4 style="margin:0 0 6px 0; font-size:0.8rem; color:var(--text-bright); text-transform:uppercase; letter-spacing:0.04em;">Technical Assessment &amp; Deployment Target</h4>
+                            <p id="modal-tech-desc" style="font-size:0.8rem; color:var(--text-main); margin:0; line-height:1.45;"></p>
+                        </div>
+
+                        <div style="margin-top:12px; display:flex; justify-content:space-between; align-items:center;">
+                            <span id="modal-file-info" style="font-size:0.75rem; color:var(--text-muted); font-family:monospace;">File: siamrpn_tracker_cpp.cpp</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 """
 Synthetic FPV Video & Ground-Truth Generator for Target Tracking Benchmark
-Simulates realistic FPV drone scenarios:
- 1. Smooth trajectory
- 2. High-speed direction change / jerk
- 3. Complete Occlusion event (Target behind obstacle)
- 4. Motion blur & vibration
- 5. Lighting / Contrast variation
+Simulates realistic FPV drone scenarios with user-controlled parameters:
+ 1. Custom Ground Truth starting position & trajectory motion pattern
+ 2. Custom Obstacle Occlusion % (0% to 100% pillar width)
+ 3. Custom FPV Camera Vibration / Shake
+ 4. Custom Motion Blur & Jitter
 """
 
 import cv2
@@ -30,126 +29,152 @@ OUTPUT_VIDEO = os.path.join(DATA_DIR, "synthetic_fpv_test.mp4")
 OUTPUT_GT = os.path.join(DATA_DIR, "synthetic_gt.json")
 
 
-def create_background(frame_idx):
-    """Generate a dynamic background with grid lines and a static obstacle."""
+def create_background(frame_idx, occlusion_pct=100.0, shake_offset=(0, 0)):
+    """Generate dynamic background grid and obstacle based on occlusion_pct."""
     img = np.zeros((HEIGHT, WIDTH, 3), dtype=np.uint8)
     
-    # Subtle dark background grid
+    # Grid lines with camera shake shift
+    dx, dy = shake_offset
     grid_size = 40
-    for x in range(0, WIDTH, grid_size):
+    for x in range(-grid_size + dx, WIDTH + grid_size, grid_size):
         cv2.line(img, (x, 0), (x, HEIGHT), (30, 30, 35), 1)
-    for y in range(0, HEIGHT, grid_size):
+    for y in range(-grid_size + dy, HEIGHT + grid_size, grid_size):
         cv2.line(img, (0, y), (WIDTH, y), (30, 30, 35), 1)
 
-    # Draw static pillar obstacle (for occlusion phase)
-    # Pillar located around x = 270..370, y = 80..400
-    cv2.rectangle(img, (270, 80), (370, 400), (45, 45, 50), -1)
-    cv2.rectangle(img, (270, 80), (370, 400), (90, 90, 100), 2)
-    cv2.putText(img, "OBSTACLE", (280, 240), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (120, 120, 140), 1)
+    # Obstacle pillar dimensions scaled by occlusion_pct
+    base_w = 100.0 * (occlusion_pct / 100.0)
+    center_x = 320 + dx
+    x1 = int(center_x - base_w / 2.0)
+    x2 = int(center_x + base_w / 2.0)
+    y1 = 80 + dy
+    y2 = 400 + dy
 
-    return img
+    if base_w > 5:
+        cv2.rectangle(img, (x1, y1), (x2, y2), (45, 45, 50), -1)
+        cv2.rectangle(img, (x1, y1), (x2, y2), (90, 90, 100), 2)
+        if base_w > 40:
+            cv2.putText(img, "OBSTACLE", (x1 + 10, 240 + dy), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (120, 120, 140), 1)
+
+    return img, (x1, y1, x2 - x1, y2 - y1)
 
 
-def get_target_position(frame_idx):
-    """
-    Compute Ground Truth target position (center_x, center_y, width, height, occluded, blurred)
-    across 5 distinct test phases.
-    """
+def get_custom_target_position(frame_idx, num_frames=300, motion_pattern="zigzag",
+                               start_x=80, start_y=150, occlusion_pct=100.0,
+                               blur_level="light", obstacle_rect=(270, 80, 100, 320)):
     t = frame_idx
     w, h = 60, 60
+    progress = t / float(max(1, num_frames))
 
-    # Phase 1: Smooth curved motion (Frames 0..60)
-    if t <= 60:
-        cx = 80 + (t / 60.0) * 120.0  # 80 -> 200
-        cy = 150 + np.sin(t * 0.1) * 30.0
-        occluded = False
-        blurred = False
-
-    # Phase 2: High Acceleration / Agile Jerk (Frames 61..120)
-    elif t <= 120:
-        dt = t - 60
-        # Fast zig-zag movement towards obstacle
-        cx = 200 + (dt / 60.0) * 120.0  # 200 -> 320
-        cy = 150 + np.sin(dt * 0.3) * 70.0
-        occluded = False
-        blurred = True if dt % 5 < 2 else False  # intermittent motion blur
-
-    # Phase 3: Complete Occlusion behind Pillar (Frames 121..180)
-    elif t <= 180:
-        dt = t - 120
-        cx = 320 + (dt / 60.0) * 40.0  # 320 -> 360 (inside 270..370 obstacle range)
-        cy = 150 + (dt / 60.0) * 80.0  # 150 -> 230
-        occluded = True if 130 <= t <= 170 else False
-        blurred = False
-
-    # Phase 4: Emergence & Fast Recovery (Frames 181..240)
-    elif t <= 240:
-        dt = t - 180
-        cx = 360 + (dt / 60.0) * 160.0  # 360 -> 520 (exits obstacle)
-        cy = 230 - (dt / 60.0) * 100.0  # 230 -> 130
-        occluded = False
-        blurred = True
-
-    # Phase 5: Circular Looping & Scale Change (Frames 241..300)
-    else:
-        dt = t - 240
-        angle = dt * 0.1
-        radius = 50.0 + dt * 0.2
-        cx = 500 + np.cos(angle) * radius
-        cy = 200 + np.sin(angle) * radius
-        w = int(60 + np.sin(dt * 0.05) * 15)  # Scale variation 45px..75px
+    if motion_pattern == "smooth":
+        cx = start_x + progress * (WIDTH - start_x - 100)
+        cy = start_y + np.sin(progress * np.pi * 3) * 40.0
+        phase = "Smooth Curved"
+    elif motion_pattern == "circular":
+        angle = progress * np.pi * 4
+        radius = 80.0 + np.sin(progress * np.pi) * 40.0
+        cx = start_x + 180 + np.cos(angle) * radius
+        cy = start_y + np.sin(angle) * radius
+        phase = "Circular Orbit"
+    elif motion_pattern == "loop":
+        cx = start_x + (np.sin(progress * np.pi * 4) * 0.5 + 0.5) * (WIDTH - start_x - 120)
+        cy = start_y + np.cos(progress * np.pi * 4) * 60.0
+        w = int(60 + np.sin(progress * np.pi * 6) * 15)
         h = w
-        occluded = False
-        blurred = False
+        phase = "Looping & Scale"
+    else:  # 'zigzag' default
+        cx = start_x + progress * (WIDTH - start_x - 100)
+        cy = start_y + np.sin(progress * np.pi * 6) * 75.0
+        phase = "Agile ZigZag"
 
     x = int(cx - w / 2.0)
     y = int(cy - h / 2.0)
-    return x, y, w, h, occluded, blurred
+
+    # Determine occlusion
+    obs_x, obs_y, obs_w, obs_h = obstacle_rect
+    occluded = False
+    if obs_w > 10 and (obs_x <= cx <= obs_x + obs_w) and (obs_y <= cy <= obs_y + obs_h):
+        if occlusion_pct > 20.0:
+            occluded = True
+
+    # Determine blur
+    blurred = False
+    if blur_level == "heavy":
+        blurred = (t % 3 != 0)
+    elif blur_level == "light":
+        blurred = (t % 5 == 0)
+
+    return x, y, w, h, occluded, blurred, phase
 
 
 def draw_target(img, bbox):
-    """Draw synthetic target (red/cyan pattern with crosshair)."""
+    """Draw synthetic target (orange/cyan/red crosshair pattern)."""
     x, y, w, h = bbox
-    # Draw object body (solid bright color for feature matching)
     cv2.rectangle(img, (x, y), (x + w, y + h), (0, 165, 255), -1)  # Orange base
     cv2.rectangle(img, (x + 5, y + 5), (x + w - 5, y + h - 5), (255, 255, 0), -1)  # Cyan center
-    cv2.circle(img, (x + w // 2, y + h // 2), w // 4, (0, 0, 255), -1)  # Red core dot
+    cv2.circle(img, (x + w // 2, y + h // 2), max(2, w // 4), (0, 0, 255), -1)  # Red core dot
 
 
-def generate_synthetic_dataset():
-    print("[SYNTHETIC GENERATOR] Generating test sequence (300 frames)...")
+def generate_custom_synthetic_dataset(
+    num_frames=300,
+    motion_pattern="zigzag",
+    occlusion_pct=100.0,
+    shake_level="medium",
+    blur_level="light",
+    start_x=80,
+    start_y=150,
+    output_video=OUTPUT_VIDEO,
+    output_gt=OUTPUT_GT
+):
+    print(f"[SYNTHETIC GENERATOR] Generating custom sequence: pattern={motion_pattern}, occlusion={occlusion_pct}%, shake={shake_level}, blur={blur_level}...")
     
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    writer = cv2.VideoWriter(OUTPUT_VIDEO, fourcc, FPS, (WIDTH, HEIGHT))
+    writer = cv2.VideoWriter(output_video, fourcc, FPS, (WIDTH, HEIGHT))
 
     gt_data = []
+    shake_scale = 0.0
+    if shake_level == "low":
+        shake_scale = 2.0
+    elif shake_level == "medium":
+        shake_scale = 5.0
+    elif shake_level == "high":
+        shake_scale = 12.0
 
-    for frame_idx in range(NUM_FRAMES):
-        frame = create_background(frame_idx)
-        x, y, w, h, occluded, blurred = get_target_position(frame_idx)
+    for frame_idx in range(num_frames):
+        # Calculate camera shake jitter
+        dx = int(np.random.normal(0, shake_scale)) if shake_scale > 0 else 0
+        dy = int(np.random.normal(0, shake_scale)) if shake_scale > 0 else 0
 
-        # Draw target BEFORE obstacle if not occluded, or draw obstacle overlay after if occluded
+        frame, obs_rect = create_background(frame_idx, occlusion_pct=occlusion_pct, shake_offset=(dx, dy))
+        x, y, w, h, occluded, blurred, phase = get_custom_target_position(
+            frame_idx, num_frames=num_frames, motion_pattern=motion_pattern,
+            start_x=start_x, start_y=start_y, occlusion_pct=occlusion_pct,
+            blur_level=blur_level, obstacle_rect=obs_rect
+        )
+
+        # Apply camera shake to target as well
+        x += dx
+        y += dy
+
         if not occluded:
             draw_target(frame, (x, y, w, h))
         else:
-            # Draw target behind obstacle, then re-draw obstacle section to cover it
             draw_target(frame, (x, y, w, h))
-            cv2.rectangle(frame, (270, 80), (370, 400), (45, 45, 50), -1)
-            cv2.rectangle(frame, (270, 80), (370, 400), (90, 90, 100), 2)
-            cv2.putText(frame, "OBSTACLE", (280, 240), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (120, 120, 140), 1)
+            obs_x, obs_y, obs_w, obs_h = obs_rect
+            if obs_w > 5:
+                cv2.rectangle(frame, (obs_x, obs_y), (obs_x + obs_w, obs_y + obs_h), (45, 45, 50), -1)
+                cv2.rectangle(frame, (obs_x, obs_y), (obs_x + obs_w, obs_y + obs_h), (90, 90, 100), 2)
+                if obs_w > 40:
+                    cv2.putText(frame, "OBSTACLE", (obs_x + 10, 240 + dy), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (120, 120, 140), 1)
 
-        # Apply motion blur if flagged
         if blurred:
-            kernel_size = 9
-            kernel = np.zeros((kernel_size, kernel_size))
-            kernel[int((kernel_size - 1) / 2), :] = np.ones(kernel_size)
-            kernel /= kernel_size
+            k_size = 11 if blur_level == "heavy" else 7
+            kernel = np.zeros((k_size, k_size))
+            kernel[int((k_size - 1) / 2), :] = np.ones(k_size)
+            kernel /= k_size
             frame = cv2.filter2D(frame, -1, kernel)
 
-        # HUD Phase Label
-        phase = "1: Smooth" if frame_idx <= 60 else ("2: Fast Jerk" if frame_idx <= 120 else ("3: Occlusion" if frame_idx <= 180 else ("4: Recovery" if frame_idx <= 240 else "5: Loop & Scale")))
-        cv2.putText(frame, f"PHASE {phase}", (20, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
-        cv2.putText(frame, f"FRAME: {frame_idx}/{NUM_FRAMES}", (WIDTH - 180, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1)
+        cv2.putText(frame, f"PATTERN: {motion_pattern.upper()} ({phase})", (20, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (255, 255, 255), 2)
+        cv2.putText(frame, f"FRAME: {frame_idx + 1}/{num_frames}", (WIDTH - 180, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1)
 
         writer.write(frame)
 
@@ -164,11 +189,20 @@ def generate_synthetic_dataset():
 
     writer.release()
 
-    with open(OUTPUT_GT, "w") as f:
+    with open(output_gt, "w") as f:
         json.dump(gt_data, f, indent=2)
 
-    print(f"[SYNTHETIC GENERATOR] Saved video to '{OUTPUT_VIDEO}' and Ground Truth to '{OUTPUT_GT}'.")
-    return OUTPUT_VIDEO, OUTPUT_GT
+    print(f"[SYNTHETIC GENERATOR] Saved video to '{output_video}' and Ground Truth to '{output_gt}'.")
+    return output_video, output_gt
+
+
+def generate_synthetic_dataset():
+    """Default fallback generator."""
+    return generate_custom_synthetic_dataset(
+        num_frames=NUM_FRAMES, motion_pattern="zigzag", occlusion_pct=100.0,
+        shake_level="medium", blur_level="light", start_x=80, start_y=150,
+        output_video=OUTPUT_VIDEO, output_gt=OUTPUT_GT
+    )
 
 
 if __name__ == "__main__":

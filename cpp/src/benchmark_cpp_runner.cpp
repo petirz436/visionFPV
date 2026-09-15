@@ -9,6 +9,20 @@
 #include <vector>
 #include <cmath>
 #include <string>
+#include <unistd.h>
+
+static double get_ram_mb() {
+    FILE* fp = fopen("/proc/self/statm", "r");
+    if (!fp) return 0.0;
+    long pages = 0;
+    if (fscanf(fp, "%*s %ld", &pages) == 1) {
+        fclose(fp);
+        long page_size = sysconf(_SC_PAGESIZE);
+        return (pages * page_size) / (1024.0 * 1024.0);
+    }
+    fclose(fp);
+    return 0.0;
+}
 
 int main(int argc, char** argv) {
     std::string video_path = "../data/synthetic_fpv_test.mp4";
@@ -78,6 +92,7 @@ int main(int argc, char** argv) {
           << "    \"w\": " << init_bbox.width << ",\n"
           << "    \"h\": " << init_bbox.height << ",\n"
           << "    \"ms\": 0.1,\n"
+          << "    \"ram_mb\": " << get_ram_mb() << ",\n"
           << "    \"status\": \"TRACKED\"\n"
           << "  }";
 
@@ -137,6 +152,7 @@ int main(int argc, char** argv) {
 
         auto t1 = std::chrono::high_resolution_clock::now();
         double elapsed_ms = std::chrono::duration<double, std::milli>(t1 - t0).count();
+        double ram_mb = get_ram_mb();
 
         out_f << ",\n  {\n"
               << "    \"frame\": " << frame_idx << ",\n"
@@ -145,6 +161,7 @@ int main(int argc, char** argv) {
               << "    \"w\": " << bbox.width << ",\n"
               << "    \"h\": " << bbox.height << ",\n"
               << "    \"ms\": " << elapsed_ms << ",\n"
+              << "    \"ram_mb\": " << ram_mb << ",\n"
               << "    \"status\": \"" << status << "\"\n"
               << "  }";
     }

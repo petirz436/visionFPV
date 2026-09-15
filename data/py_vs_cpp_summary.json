@@ -1,16 +1,18 @@
 {
   "python_visionFPV3": {
-    "mean_error_px": 5.17,
-    "mean_iou": 0.781,
-    "success_rate_percent": 99.0,
-    "mean_latency_ms": 17.88,
-    "fps": 55.9
+    "mean_error_px": 120.77,
+    "mean_iou": 0.341,
+    "success_rate_percent": 45.5,
+    "mean_latency_ms": 59.91,
+    "fps": 16.7,
+    "mean_ram_mb": 309.9
   },
   "cpp_vision_fpv3": {
-    "mean_error_px": 9.4,
-    "mean_iou": 0.693,
-    "success_rate_percent": 97.7,
-    "mean_latency_ms": 17.25,
-    "fps": 58.0
+    "mean_error_px": 115.82,
+    "mean_iou": 0.291,
+    "success_rate_percent": 45.8,
+    "mean_latency_ms": 56.23,
+    "fps": 17.8,
+    "mean_ram_mb": 357.6
   }
 }
